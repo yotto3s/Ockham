@@ -61,6 +61,11 @@ typedef struct OkmInstr {
             uint32_t arg_count_false;
         } branch;
 
+        /* Used for RET */
+        struct {
+            OkmValue* val; /* NULL for void return */
+        } ret;
+
     } as;
 } OkmInstr;
 

@@ -9,7 +9,6 @@
 #define ARENA_CHUNK_SIZE (256u * 1024u)
 
 void okm_arena_chunk_init(OkmArenaChunk* const chunk) {
-    assert(chunk);
     chunk->buffer = (uint8_t*)malloc(ARENA_CHUNK_SIZE);
     if (!chunk->buffer) {
         fprintf(stderr, "Error: Failed to allocate chunk->buffer\n");
@@ -21,7 +20,6 @@ void okm_arena_chunk_init(OkmArenaChunk* const chunk) {
 }
 
 void okm_arena_init(OkmArena* const arena) {
-    assert(arena);
     arena->head = (OkmArenaChunk*)malloc(sizeof(OkmArenaChunk));
     if (!arena->head) {
         fprintf(stderr, "Error: Failed to allocate arena->head\n");
@@ -32,7 +30,6 @@ void okm_arena_init(OkmArena* const arena) {
 }
 
 void* okm_arena_alloc(OkmArena* const arena, const size_t size) {
-    assert(arena);
     assert(size <= ARENA_CHUNK_SIZE);
 
     const size_t align = 8u;
@@ -64,7 +61,6 @@ void* okm_arena_alloc(OkmArena* const arena, const size_t size) {
 }
 
 void okm_arena_reset(OkmArena* const arena) {
-    assert(arena);
     OkmArenaChunk* curr = arena->head;
     while (curr) {
         curr->offset = 0u;
@@ -75,8 +71,6 @@ void okm_arena_reset(OkmArena* const arena) {
 }
 
 void okm_arena_destroy(OkmArena* const arena) {
-    assert(arena);
-
     OkmArenaChunk* curr = arena->head;
     while (curr) {
         OkmArenaChunk* next = curr->next;

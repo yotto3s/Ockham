@@ -64,4 +64,15 @@ typedef struct OkmInstr OkmInstr;
 typedef struct OkmFunction OkmFunction;
 typedef struct OkmContext OkmContext;
 
+OkmInstr* okm_emit_const_int(OkmContext* const ctx, OkmBlock* const block,
+                             OkmValue* const dst, const uint64_t val);
+OkmInstr* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
+                       OkmOp const op, OkmValue* const dst, OkmValue* const lhs,
+                       OkmValue* const rhs);
+OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
+                       OkmValue* const val);
+OkmFunction* okm_emit_function(OkmContext* const ctx, const char* const name,
+                               const OkmType return_type);
+OkmBlock* okm_emit_block(OkmContext* const ctx, OkmFunction* const func);
+
 #endif /* OCKHAM_INCLUDE_OCKHAM_OCKHAM_H_ */

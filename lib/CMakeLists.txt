@@ -1,4 +1,9 @@
-add_library(ockham STATIC arena.c)
+add_library(ockham STATIC
+    arena.c
+    instruction.c
+    function.c
+    block.c
+)
 
 target_include_directories(ockham
     PUBLIC
