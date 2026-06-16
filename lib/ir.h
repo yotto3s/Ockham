@@ -7,11 +7,22 @@
 
 /* An OkmValue represents a single, immutable SSA register. */
 typedef struct OkmValue {
-    uint32_t id;  /* Unique identifier for printing (e.g., %14) */
-    OkmType type; /* The size/format of this register */
-
-    /* A pointer to the instruction that created this value. */
-    OkmInstr* def;
+    OkmValueKind kind;
+    /* The size/format of this register. For globals/funcs, this is a pointer
+     * type like I64 */
+    OkmType type;
+    union {
+        /* For REG kind */
+        struct {
+            uint32_t id;
+            /* A pointer to the instruction that created this value. */
+            OkmInstr* def;
+        } reg;
+        /* For GLOBAL and FUNCTION kind */
+        struct {
+            const char* symbol;
+        } sym;
+    } as;
 } OkmValue;
 
 typedef struct OkmInstr {
@@ -75,6 +86,9 @@ typedef struct OkmBlock {
     /* MLIR-style Block Arguments (acting as phi destinations) */
     OkmValue** params; /* Array of SSA values this block requires */
     uint32_t param_count;
+
+    /* Parent function */
+    OkmFunction* function;
 
     /* Intrusive linked list of instructions */
     OkmInstr* instr_head;

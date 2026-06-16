@@ -3,8 +3,8 @@
 #include "ir.h"
 #include "ockham/ockham.h"
 
-OkmFunction* okm_emit_function(OkmContext* const ctx, const char* const name,
-                               const OkmType return_type) {
+OkmFunction* okm_new_function(OkmContext* const ctx, const char* const name,
+                              const OkmType return_type) {
     OkmFunction* const func =
         (OkmFunction*)okm_arena_alloc(&ctx->arena, sizeof(OkmFunction));
 

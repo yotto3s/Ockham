@@ -120,21 +120,31 @@ static OkmInstr* okm_alloc_instr(OkmContext* const ctx, OkmBlock* const block) {
     return instr;
 }
 
-OkmInstr* okm_emit_const_int(OkmContext* const ctx, OkmBlock* const block,
-                             OkmValue* const dst, const uint64_t val) {
+static OkmValue* okm_alloc_value_reg(OkmContext* const ctx,
+                                     OkmBlock* const block,
+                                     OkmInstr* const instr) {
+    OkmValue* val = (OkmValue*)okm_arena_alloc(&ctx->arena, sizeof(OkmValue));
+    val->kind = OKM_VALUE_KIND_REG;
+    val->as.reg.id = block->function->next_val_id++;
+    val->as.reg.def = instr;
+
+    return val;
+}
+
+OkmValue* okm_emit_const_int(OkmContext* const ctx, OkmBlock* const block,
+                             const uint64_t val) {
     OkmInstr* const instr = okm_alloc_instr(ctx, block);
+    OkmValue* const dst = okm_alloc_value_reg(ctx, block, instr);
+
     instr->op = OKM_OP_CONST;
     instr->as.imm.dst = dst;
     instr->as.imm.val.i = val;
 
-    if (dst) {
-        dst->def = instr;
-    }
-    return instr;
+    return dst;
 }
 
-OkmInstr* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
-                       OkmOp const op, OkmValue* const dst, OkmValue* const lhs,
+OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
+                       OkmOp const op, OkmValue* const lhs,
                        OkmValue* const rhs) {
     if (!okm_is_alu_op(op)) {
         fprintf(stderr, "Error: expected alu op, found %s\n",
@@ -142,15 +152,14 @@ OkmInstr* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
         return NULL;
     }
     OkmInstr* const instr = okm_alloc_instr(ctx, block);
+    OkmValue* const dst = okm_alloc_value_reg(ctx, block, instr);
+
     instr->op = op;
     instr->as.alu.dst = dst;
     instr->as.alu.lhs = lhs;
     instr->as.alu.rhs = rhs;
 
-    if (dst) {
-        dst->def = instr;
-    }
-    return instr;
+    return dst;
 }
 
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,

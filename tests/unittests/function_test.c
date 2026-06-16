@@ -10,18 +10,18 @@ void setUp(void) { okm_arena_init(&ctx.arena); }
 
 void tearDown(void) { okm_arena_destroy(&ctx.arena); }
 
-void test_EmitFunction_Name(void) {
-    OkmFunction* func = okm_emit_function(&ctx, "my_func", OKM_TY_I32);
+void test_NewFunction_Name(void) {
+    OkmFunction* func = okm_new_function(&ctx, "my_func", OKM_TY_I32);
     TEST_ASSERT_EQUAL_STRING("my_func", func->name);
 }
 
-void test_EmitFunction_ReturnType(void) {
-    OkmFunction* func = okm_emit_function(&ctx, "f", OKM_TY_F64);
+void test_NewFunction_ReturnType(void) {
+    OkmFunction* func = okm_new_function(&ctx, "f", OKM_TY_F64);
     TEST_ASSERT_EQUAL_INT(OKM_TY_F64, func->return_type);
 }
 
-void test_EmitFunction_InitialState(void) {
-    OkmFunction* func = okm_emit_function(&ctx, "f", OKM_TY_I64);
+void test_NewFunction_InitialState(void) {
+    OkmFunction* func = okm_new_function(&ctx, "f", OKM_TY_I64);
     TEST_ASSERT_NULL(func->params);
     TEST_ASSERT_EQUAL_UINT32(0u, func->param_count);
     TEST_ASSERT_NULL(func->block_head);
@@ -30,9 +30,9 @@ void test_EmitFunction_InitialState(void) {
     TEST_ASSERT_EQUAL_UINT32(0u, func->next_block_id);
 }
 
-void test_EmitFunction_MultipleIndependent(void) {
-    OkmFunction* f1 = okm_emit_function(&ctx, "f1", OKM_TY_I32);
-    OkmFunction* f2 = okm_emit_function(&ctx, "f2", OKM_TY_I64);
+void test_NewFunction_MultipleIndependent(void) {
+    OkmFunction* f1 = okm_new_function(&ctx, "f1", OKM_TY_I32);
+    OkmFunction* f2 = okm_new_function(&ctx, "f2", OKM_TY_I64);
     TEST_ASSERT_NOT_EQUAL(f1, f2);
     TEST_ASSERT_EQUAL_STRING("f1", f1->name);
     TEST_ASSERT_EQUAL_STRING("f2", f2->name);
@@ -42,9 +42,9 @@ void test_EmitFunction_MultipleIndependent(void) {
 
 int main(void) {
     UNITY_BEGIN();
-    RUN_TEST(test_EmitFunction_Name);
-    RUN_TEST(test_EmitFunction_ReturnType);
-    RUN_TEST(test_EmitFunction_InitialState);
-    RUN_TEST(test_EmitFunction_MultipleIndependent);
+    RUN_TEST(test_NewFunction_Name);
+    RUN_TEST(test_NewFunction_ReturnType);
+    RUN_TEST(test_NewFunction_InitialState);
+    RUN_TEST(test_NewFunction_MultipleIndependent);
     return UNITY_END();
 }

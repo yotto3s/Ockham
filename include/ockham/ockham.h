@@ -55,8 +55,15 @@ typedef enum {
     OKM_OP_JMP, /* Unconditional jump */
     OKM_OP_JNZ, /* Jump if not zero */
     OKM_OP_CALL,
-    OKM_OP_RET
+    OKM_OP_RET,
+    OKM_OP_SYSCALL
 } OkmOp;
+
+typedef enum {
+    OKM_VALUE_KIND_REG,             /* SSA register */
+    OKM_VALUE_KIND_GLOBAL_SYMBOL,   /* Global variable symbol */
+    OKM_VALUE_KIND_FUNCTION_SYMBOL, /* Function symbol */
+} OkmValueKind;
 
 typedef struct OkmValue OkmValue;
 typedef struct OkmBlock OkmBlock;
@@ -64,15 +71,15 @@ typedef struct OkmInstr OkmInstr;
 typedef struct OkmFunction OkmFunction;
 typedef struct OkmContext OkmContext;
 
-OkmInstr* okm_emit_const_int(OkmContext* const ctx, OkmBlock* const block,
-                             OkmValue* const dst, const uint64_t val);
-OkmInstr* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
-                       OkmOp const op, OkmValue* const dst, OkmValue* const lhs,
+OkmValue* okm_emit_const_int(OkmContext* const ctx, OkmBlock* const block,
+                             const uint64_t val);
+OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
+                       OkmOp const op, OkmValue* const lhs,
                        OkmValue* const rhs);
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
                        OkmValue* const val);
-OkmFunction* okm_emit_function(OkmContext* const ctx, const char* const name,
-                               const OkmType return_type);
-OkmBlock* okm_emit_block(OkmContext* const ctx, OkmFunction* const func);
+OkmFunction* okm_new_function(OkmContext* const ctx, const char* const name,
+                              const OkmType return_type);
+OkmBlock* okm_new_block(OkmContext* const ctx, OkmFunction* const func);
 
 #endif /* OCKHAM_INCLUDE_OCKHAM_OCKHAM_H_ */

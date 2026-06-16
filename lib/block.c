@@ -3,13 +3,15 @@
 #include "ir.h"
 #include "ockham/ockham.h"
 
-OkmBlock* okm_emit_block(OkmContext* const ctx, OkmFunction* const func) {
+OkmBlock* okm_new_block(OkmContext* const ctx, OkmFunction* const func) {
     OkmBlock* const block =
         (OkmBlock*)okm_arena_alloc(&ctx->arena, sizeof(OkmBlock));
 
     block->id = func->next_block_id++;
     block->params = NULL;
     block->param_count = 0u;
+
+    block->function = func;
 
     block->instr_head = NULL;
     block->instr_tail = NULL;

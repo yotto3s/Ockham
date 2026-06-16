@@ -9,18 +9,18 @@ static OkmFunction* func;
 
 void setUp(void) {
     okm_arena_init(&ctx.arena);
-    func = okm_emit_function(&ctx, "test_func", OKM_TY_I32);
+    func = okm_new_function(&ctx, "test_func", OKM_TY_I32);
 }
 
 void tearDown(void) { okm_arena_destroy(&ctx.arena); }
 
-void test_EmitBlock_FirstBlockId(void) {
-    OkmBlock* block = okm_emit_block(&ctx, func);
+void test_NewBlock_FirstBlockId(void) {
+    OkmBlock* block = okm_new_block(&ctx, func);
     TEST_ASSERT_EQUAL_UINT32(0u, block->id);
 }
 
-void test_EmitBlock_FirstBlockInitialState(void) {
-    OkmBlock* block = okm_emit_block(&ctx, func);
+void test_NewBlock_FirstBlockInitialState(void) {
+    OkmBlock* block = okm_new_block(&ctx, func);
     TEST_ASSERT_NULL(block->params);
     TEST_ASSERT_EQUAL_UINT32(0u, block->param_count);
     TEST_ASSERT_NULL(block->instr_head);
@@ -29,21 +29,26 @@ void test_EmitBlock_FirstBlockInitialState(void) {
     TEST_ASSERT_NULL(block->next);
 }
 
-void test_EmitBlock_UpdatesFunctionHeadTail(void) {
-    OkmBlock* block = okm_emit_block(&ctx, func);
+void test_NewBlock_UpdatesFunctionHeadTail(void) {
+    OkmBlock* block = okm_new_block(&ctx, func);
     TEST_ASSERT_EQUAL_PTR(block, func->block_head);
     TEST_ASSERT_EQUAL_PTR(block, func->block_tail);
 }
 
-void test_EmitBlock_SecondBlockId(void) {
-    okm_emit_block(&ctx, func);
-    OkmBlock* b2 = okm_emit_block(&ctx, func);
+void test_NewBlock_SecondBlockId(void) {
+    okm_new_block(&ctx, func);
+    OkmBlock* b2 = okm_new_block(&ctx, func);
     TEST_ASSERT_EQUAL_UINT32(1u, b2->id);
 }
 
-void test_EmitBlock_LinkedList(void) {
-    OkmBlock* b1 = okm_emit_block(&ctx, func);
-    OkmBlock* b2 = okm_emit_block(&ctx, func);
+void test_NewBlock_HasFunctionPointer(void) {
+    OkmBlock* block = okm_new_block(&ctx, func);
+    TEST_ASSERT_EQUAL_PTR(func, block->function);
+}
+
+void test_NewBlock_LinkedList(void) {
+    OkmBlock* b1 = okm_new_block(&ctx, func);
+    OkmBlock* b2 = okm_new_block(&ctx, func);
 
     /* b1 -> b2 */
     TEST_ASSERT_EQUAL_PTR(b2, b1->next);
@@ -60,10 +65,11 @@ void test_EmitBlock_LinkedList(void) {
 
 int main(void) {
     UNITY_BEGIN();
-    RUN_TEST(test_EmitBlock_FirstBlockId);
-    RUN_TEST(test_EmitBlock_FirstBlockInitialState);
-    RUN_TEST(test_EmitBlock_UpdatesFunctionHeadTail);
-    RUN_TEST(test_EmitBlock_SecondBlockId);
-    RUN_TEST(test_EmitBlock_LinkedList);
+    RUN_TEST(test_NewBlock_FirstBlockId);
+    RUN_TEST(test_NewBlock_FirstBlockInitialState);
+    RUN_TEST(test_NewBlock_UpdatesFunctionHeadTail);
+    RUN_TEST(test_NewBlock_SecondBlockId);
+    RUN_TEST(test_NewBlock_HasFunctionPointer);
+    RUN_TEST(test_NewBlock_LinkedList);
     return UNITY_END();
 }
