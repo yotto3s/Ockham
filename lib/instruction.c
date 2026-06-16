@@ -1,11 +1,17 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "arena.h"
 #include "context.h"
 #include "ir.h"
 #include "ockham/ockham.h"
+
+static void unimplemented() {
+    fprintf(stderr, "unimplemented!\n");
+    exit(1);
+}
 
 static char* okm_op_to_string(OkmOp const op) {
     switch (op) {
@@ -169,4 +175,100 @@ OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
     instr->as.ret.val = val;
 
     return instr;
+}
+
+OkmValue* okm_emit_const_float(OkmContext* const ctx, OkmBlock* const block,
+                               const double val) {
+    (void)ctx;
+    (void)block;
+    (void)val;
+    unimplemented();
+    return NULL;
+}
+
+OkmValue* okm_emit_alloca(OkmContext* const ctx, OkmBlock* const block,
+                          const uint32_t bytes) {
+    (void)ctx;
+    (void)block;
+    (void)bytes;
+    unimplemented();
+    return NULL;
+}
+
+OkmValue* okm_emit_load(OkmContext* const ctx, OkmBlock* const block,
+                        const OkmType type, OkmValue* const ptr) {
+    (void)ctx;
+    (void)block;
+    (void)type;
+    (void)ptr;
+    unimplemented();
+    return NULL;
+}
+
+OkmInstr* okm_emit_store(OkmContext* const ctx, OkmBlock* const block,
+                         OkmValue* const val, OkmValue* const ptr) {
+    (void)ctx;
+    (void)block;
+    (void)val;
+    (void)ptr;
+    unimplemented();
+    return NULL;
+}
+
+OkmInstr* okm_emit_jmp(OkmContext* const ctx, OkmBlock* const block,
+                       OkmBlock* const target, OkmValue** const args,
+                       const uint32_t arg_count) {
+    (void)ctx;
+    (void)block;
+    (void)target;
+    (void)args;
+    (void)arg_count;
+    unimplemented();
+    return NULL;
+}
+
+OkmInstr* okm_emit_jnz(OkmContext* const ctx, OkmBlock* const block,
+                       OkmValue* const cond, OkmBlock* const target_true,
+                       OkmValue** const args_true,
+                       const uint32_t arg_count_true,
+                       OkmBlock* const target_false,
+                       OkmValue** const args_false,
+                       const uint32_t arg_count_false) {
+    (void)ctx;
+    (void)block;
+    (void)cond;
+    (void)target_true;
+    (void)args_true;
+    (void)arg_count_true;
+    (void)target_false;
+    (void)args_false;
+    (void)arg_count_false;
+    unimplemented();
+    return NULL;
+}
+
+OkmValue* okm_emit_call(OkmContext* const ctx, OkmBlock* const block,
+                        const OkmType return_type, OkmValue* const callee,
+                        OkmValue** const args, const uint32_t arg_count) {
+    (void)ctx;
+    (void)block;
+    (void)return_type;
+    (void)callee;
+    (void)args;
+    (void)arg_count;
+    unimplemented();
+    return NULL;
+}
+
+OkmValue* okm_emit_syscall(OkmContext* const ctx, OkmBlock* const block,
+                           const OkmType return_type, const uint64_t num,
+                           OkmValue** const args, const uint32_t arg_count) {
+    (void)ctx;
+    (void)block;
+    (void)return_type;
+    (void)num;
+    (void)args;
+    (void)arg_count;
+    unimplemented();
+    return NULL;
 }

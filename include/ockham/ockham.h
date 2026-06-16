@@ -78,6 +78,30 @@ OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
                        OkmValue* const rhs);
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
                        OkmValue* const val);
+OkmValue* okm_emit_const_float(OkmContext* const ctx, OkmBlock* const block,
+                               const double val);
+OkmValue* okm_emit_alloca(OkmContext* const ctx, OkmBlock* const block,
+                          const uint32_t bytes);
+OkmValue* okm_emit_load(OkmContext* const ctx, OkmBlock* const block,
+                        const OkmType type, OkmValue* const ptr);
+OkmInstr* okm_emit_store(OkmContext* const ctx, OkmBlock* const block,
+                         OkmValue* const val, OkmValue* const ptr);
+OkmInstr* okm_emit_jmp(OkmContext* const ctx, OkmBlock* const block,
+                       OkmBlock* const target, OkmValue** const args,
+                       const uint32_t arg_count);
+OkmInstr* okm_emit_jnz(OkmContext* const ctx, OkmBlock* const block,
+                       OkmValue* const cond, OkmBlock* const target_true,
+                       OkmValue** const args_true,
+                       const uint32_t arg_count_true,
+                       OkmBlock* const target_false,
+                       OkmValue** const args_false,
+                       const uint32_t arg_count_false);
+OkmValue* okm_emit_call(OkmContext* const ctx, OkmBlock* const block,
+                        const OkmType return_type, OkmValue* const callee,
+                        OkmValue** const args, const uint32_t arg_count);
+OkmValue* okm_emit_syscall(OkmContext* const ctx, OkmBlock* const block,
+                           const OkmType return_type, const uint64_t num,
+                           OkmValue** const args, const uint32_t arg_count);
 OkmFunction* okm_new_function(OkmContext* const ctx, const char* const name,
                               const OkmType return_type);
 OkmBlock* okm_new_block(OkmContext* const ctx, OkmFunction* const func);
