@@ -1,5 +1,6 @@
 add_library(ockham STATIC
     arena.c
+    context.c
     instruction.c
     function.c
     block.c

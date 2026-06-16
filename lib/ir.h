@@ -77,6 +77,14 @@ typedef struct OkmInstr {
             OkmValue* val; /* NULL for void return */
         } ret;
 
+        /* Used for syscall */
+        struct {
+            OkmValue* dst;      /* The result of the syscall */
+            OkmValue* sys_num;  /* The syscall number */
+            OkmValue* args[6];  /* Up to 6 arguments */
+            uint32_t arg_count; /* How many arguments are actually used */
+        } syscall;
+
     } as;
 } OkmInstr;
 

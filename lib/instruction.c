@@ -84,27 +84,27 @@ static char* okm_op_to_string(OkmOp const op) {
 
 static bool okm_is_alu_op(OkmOp const op) {
     switch (op) {
-        case OKM_OP_ADD:    // fall through
-        case OKM_OP_SUB:    // fall through
-        case OKM_OP_MUL:    // fall through
-        case OKM_OP_SDIV:   // fall through
-        case OKM_OP_UDIV:   // fall through
-        case OKM_OP_SREM:   // fall through
-        case OKM_OP_UREM:   // fall through
-        case OKM_OP_FADD:   // fall through
-        case OKM_OP_FSUB:   // fall through
-        case OKM_OP_FMUL:   // fall through
-        case OKM_OP_FDIV:   // fall through
-        case OKM_OP_AND:    // fall through
-        case OKM_OP_OR:     // fall through
-        case OKM_OP_XOR:    // fall through
-        case OKM_OP_SHL:    // fall through
-        case OKM_OP_SHR:    // fall through
-        case OKM_OP_EXTS:   // fall through
-        case OKM_OP_EXTZ:   // fall through
-        case OKM_OP_TRUNC:  // fall through
-        case OKM_OP_F2I:    // fall through
-        case OKM_OP_I2F:    // fall through
+        case OKM_OP_ADD:   /* fall through */
+        case OKM_OP_SUB:   /* fall through */
+        case OKM_OP_MUL:   /* fall through */
+        case OKM_OP_SDIV:  /* fall through */
+        case OKM_OP_UDIV:  /* fall through */
+        case OKM_OP_SREM:  /* fall through */
+        case OKM_OP_UREM:  /* fall through */
+        case OKM_OP_FADD:  /* fall through */
+        case OKM_OP_FSUB:  /* fall through */
+        case OKM_OP_FMUL:  /* fall through */
+        case OKM_OP_FDIV:  /* fall through */
+        case OKM_OP_AND:   /* fall through */
+        case OKM_OP_OR:    /* fall through */
+        case OKM_OP_XOR:   /* fall through */
+        case OKM_OP_SHL:   /* fall through */
+        case OKM_OP_SHR:   /* fall through */
+        case OKM_OP_EXTS:  /* fall through */
+        case OKM_OP_EXTZ:  /* fall through */
+        case OKM_OP_TRUNC: /* fall through */
+        case OKM_OP_F2I:   /* fall through */
+        case OKM_OP_I2F:   /* fall through */
             return true;
         default:
             return false;
@@ -261,14 +261,24 @@ OkmValue* okm_emit_call(OkmContext* const ctx, OkmBlock* const block,
 }
 
 OkmValue* okm_emit_syscall(OkmContext* const ctx, OkmBlock* const block,
-                           const OkmType return_type, const uint64_t num,
-                           OkmValue** const args, const uint32_t arg_count) {
-    (void)ctx;
-    (void)block;
-    (void)return_type;
-    (void)num;
-    (void)args;
-    (void)arg_count;
-    unimplemented();
-    return NULL;
+                           OkmValue* const sys_num, OkmValue** const args,
+                           const uint32_t arg_count) {
+    if (arg_count > 6) {
+        fprintf(stderr, "Error: syscall cannot have more than 6 arguments\n");
+        return NULL;
+    }
+
+    OkmInstr* instr = okm_alloc_instr(ctx, block);
+    OkmValue* dst = okm_alloc_value_reg(ctx, block, instr);
+
+    instr->op = OKM_OP_SYSCALL;
+    instr->as.syscall.dst = dst;
+    instr->as.syscall.sys_num = sys_num;
+    instr->as.syscall.arg_count = arg_count;
+
+    for (uint32_t i = 0u; i < arg_count; ++i) {
+        instr->as.syscall.args[i] = args[i];
+    }
+
+    return dst;
 }

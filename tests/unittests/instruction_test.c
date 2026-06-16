@@ -118,6 +118,47 @@ void test_EmitRet_NullVal(void) {
     TEST_ASSERT_NULL(instr->as.ret.val);
 }
 
+/* --- okm_emit_syscall --- */
+
+void test_EmitSyscall_ReturnsNonNull(void) {
+    OkmValue* args[2];
+    args[0] = okm_emit_const_int(&ctx, block, 1u);
+    args[1] = okm_emit_const_int(&ctx, block, 2u);
+    OkmValue* sys_num = okm_emit_const_int(&ctx, block, 60u);
+    OkmValue* val = okm_emit_syscall(&ctx, block, sys_num, args, 2u);
+    TEST_ASSERT_NOT_NULL(val);
+}
+
+void test_EmitSyscall_OpcodeAndFields(void) {
+    OkmValue* args[2];
+    args[0] = okm_emit_const_int(&ctx, block, 10u);
+    args[1] = okm_emit_const_int(&ctx, block, 20u);
+    OkmValue* sys_num = okm_emit_const_int(&ctx, block, 60u);
+    OkmValue* val = okm_emit_syscall(&ctx, block, sys_num, args, 2u);
+
+    TEST_ASSERT_EQUAL_INT(OKM_VALUE_KIND_REG, val->kind);
+    OkmInstr* instr = val->as.reg.def;
+    TEST_ASSERT_NOT_NULL(instr);
+    TEST_ASSERT_EQUAL_INT(OKM_OP_SYSCALL, instr->op);
+    TEST_ASSERT_EQUAL_PTR(val, instr->as.syscall.dst);
+
+    TEST_ASSERT_EQUAL_PTR(sys_num, instr->as.syscall.sys_num);
+
+    TEST_ASSERT_EQUAL_UINT32(2u, instr->as.syscall.arg_count);
+    TEST_ASSERT_EQUAL_PTR(args[0], instr->as.syscall.args[0]);
+    TEST_ASSERT_EQUAL_PTR(args[1], instr->as.syscall.args[1]);
+}
+
+void test_EmitSyscall_TooManyArgsReturnsNull(void) {
+    OkmValue* args[7];
+    for (int i = 0; i < 7; ++i) {
+        args[i] = okm_emit_const_int(&ctx, block, (uint64_t)i);
+    }
+    OkmValue* sys_num = okm_emit_const_int(&ctx, block, 60u);
+    OkmValue* val = okm_emit_syscall(&ctx, block, sys_num, args, 7u);
+    TEST_ASSERT_NULL(val);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_EmitConstInt_ReturnsNonNull);
@@ -135,5 +176,8 @@ int main(void) {
     RUN_TEST(test_EmitRet_Op);
     RUN_TEST(test_EmitRet_Val);
     RUN_TEST(test_EmitRet_NullVal);
+    RUN_TEST(test_EmitSyscall_ReturnsNonNull);
+    RUN_TEST(test_EmitSyscall_OpcodeAndFields);
+    RUN_TEST(test_EmitSyscall_TooManyArgsReturnsNull);
     return UNITY_END();
 }

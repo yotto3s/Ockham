@@ -65,12 +65,28 @@ typedef enum {
     OKM_VALUE_KIND_FUNCTION_SYMBOL, /* Function symbol */
 } OkmValueKind;
 
+typedef enum { OKM_ARCH_X86_64, OKM_ARCH_AARCH64 } OkmArch;
+
+typedef enum {
+    OKM_OS_LINUX,
+    OKM_OS_MACOS,
+    OKM_OS_WINDOWS,
+    OKM_OS_FREESTANDING
+} OkmOS;
+
 typedef struct OkmValue OkmValue;
 typedef struct OkmBlock OkmBlock;
 typedef struct OkmInstr OkmInstr;
 typedef struct OkmFunction OkmFunction;
 typedef struct OkmContext OkmContext;
 
+OkmContext* okm_new_context(const OkmArch arch, const OkmOS os);
+void okm_destroy_context(OkmContext* const ctx);
+OkmFunction* okm_new_function(OkmContext* const ctx, const char* const name,
+                              const OkmType return_type);
+OkmBlock* okm_new_block(OkmContext* const ctx, OkmFunction* const func);
+
+/* Instructions */
 OkmValue* okm_emit_const_int(OkmContext* const ctx, OkmBlock* const block,
                              const uint64_t val);
 OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
@@ -100,10 +116,7 @@ OkmValue* okm_emit_call(OkmContext* const ctx, OkmBlock* const block,
                         const OkmType return_type, OkmValue* const callee,
                         OkmValue** const args, const uint32_t arg_count);
 OkmValue* okm_emit_syscall(OkmContext* const ctx, OkmBlock* const block,
-                           const OkmType return_type, const uint64_t num,
-                           OkmValue** const args, const uint32_t arg_count);
-OkmFunction* okm_new_function(OkmContext* const ctx, const char* const name,
-                              const OkmType return_type);
-OkmBlock* okm_new_block(OkmContext* const ctx, OkmFunction* const func);
+                           OkmValue* const sys_num, OkmValue** const args,
+                           const uint32_t arg_count);
 
 #endif /* OCKHAM_INCLUDE_OCKHAM_OCKHAM_H_ */
