@@ -43,3 +43,9 @@ target_include_directories(context_test PRIVATE ${UNITTEST_INCLUDE_DIRS})
 target_link_libraries(context_test PRIVATE ockham unity)
 add_test(NAME context_test COMMAND context_test)
 
+# --- emit_test ---
+add_executable(emit_test emit_test.c)
+target_include_directories(emit_test PRIVATE ${UNITTEST_INCLUDE_DIRS})
+target_link_libraries(emit_test PRIVATE ockham unity)
+add_test(NAME emit_test COMMAND emit_test)
+

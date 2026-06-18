@@ -4,6 +4,7 @@ add_library(ockham STATIC
     instruction.c
     function.c
     block.c
+    x86_64/emit.c
 )
 
 target_include_directories(ockham
