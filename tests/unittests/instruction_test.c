@@ -50,7 +50,7 @@ void test_EmitConstInt_DefOpIsConst(void) {
 
 void test_EmitConstInt_DefStoresValue(void) {
     OkmValue* val = okm_emit_const_int(&ctx, block, 1234u);
-    TEST_ASSERT_EQUAL_UINT64(1234u, val->as.reg.def->as.imm.val.i);
+    TEST_ASSERT_EQUAL_UINT64(1234u, val->as.reg.def->as.imm.i);
 }
 
 void test_EmitConstInt_DefDstPointsBack(void) {

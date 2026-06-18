@@ -16,8 +16,8 @@ void test_NewFunction_Name(void) {
 }
 
 void test_NewFunction_ReturnType(void) {
-    OkmFunction* func = okm_new_function(&ctx, "f", OKM_TY_F64);
-    TEST_ASSERT_EQUAL_INT(OKM_TY_F64, func->return_type);
+    OkmFunction* func = okm_new_function(&ctx, "f", OKM_TY_I64);
+    TEST_ASSERT_EQUAL_INT(OKM_TY_I64, func->return_type);
 }
 
 void test_NewFunction_InitialState(void) {

@@ -44,10 +44,7 @@ typedef struct OkmInstr {
         /* Used for CONST and FCONST */
         struct {
             OkmValue* dst;
-            union {
-                uint64_t i;
-                double f;
-            } val;
+            uint64_t i;
         } imm;
 
         /* Used for ALLOC, LOAD, and STORE */

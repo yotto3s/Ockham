@@ -7,15 +7,12 @@ typedef enum {
     OKM_TY_I16,
     OKM_TY_I32,
     OKM_TY_I64,
-    OKM_TY_F32,
-    OKM_TY_F64
 } OkmType;
 
 /* Opcodes contain the signedness and operation logic. */
 typedef enum {
     /* Constants */
     OKM_OP_CONST,
-    OKM_OP_FCONST,
 
     /* Integer Math */
     OKM_OP_ADD,
@@ -25,12 +22,6 @@ typedef enum {
     OKM_OP_UDIV,
     OKM_OP_SREM,
     OKM_OP_UREM,
-
-    /* Floating Point Math */
-    OKM_OP_FADD,
-    OKM_OP_FSUB,
-    OKM_OP_FMUL,
-    OKM_OP_FDIV,
 
     /* Bitwise (Always unsigned natively) */
     OKM_OP_AND,
@@ -43,8 +34,6 @@ typedef enum {
     OKM_OP_EXTS,  /* Sign extend */
     OKM_OP_EXTZ,  /* Zero extend */
     OKM_OP_TRUNC, /* Truncate */
-    OKM_OP_F2I,   /* Float to Int */
-    OKM_OP_I2F,   /* Int to Float */
 
     /* Memory Operations */
     OKM_OP_ALLOCA, /* Allocates stack space */
@@ -94,8 +83,6 @@ OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
                        OkmValue* const rhs);
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
                        OkmValue* const val);
-OkmValue* okm_emit_const_float(OkmContext* const ctx, OkmBlock* const block,
-                               const double val);
 OkmValue* okm_emit_alloca(OkmContext* const ctx, OkmBlock* const block,
                           const uint32_t bytes);
 OkmValue* okm_emit_load(OkmContext* const ctx, OkmBlock* const block,

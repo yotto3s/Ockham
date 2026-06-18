@@ -17,8 +17,6 @@ static char* okm_op_to_string(OkmOp const op) {
     switch (op) {
         case OKM_OP_CONST:
             return "OKM_OP_CONST";
-        case OKM_OP_FCONST:
-            return "OKM_OP_FCONST";
         case OKM_OP_ADD:
             return "OKM_OP_ADD";
         case OKM_OP_SUB:
@@ -33,14 +31,6 @@ static char* okm_op_to_string(OkmOp const op) {
             return "OKM_OP_SREM";
         case OKM_OP_UREM:
             return "OKM_OP_UREM";
-        case OKM_OP_FADD:
-            return "OKM_OP_FADD";
-        case OKM_OP_FSUB:
-            return "OKM_OP_FSUB";
-        case OKM_OP_FMUL:
-            return "OKM_OP_FMUL";
-        case OKM_OP_FDIV:
-            return "OKM_OP_FDIV";
         case OKM_OP_AND:
             return "OKM_OP_AND";
         case OKM_OP_OR:
@@ -57,10 +47,6 @@ static char* okm_op_to_string(OkmOp const op) {
             return "OKM_OP_EXTZ";
         case OKM_OP_TRUNC:
             return "OKM_OP_TRUNC";
-        case OKM_OP_F2I:
-            return "OKM_OP_F2I";
-        case OKM_OP_I2F:
-            return "OKM_OP_I2F";
         case OKM_OP_ALLOCA:
             return "OKM_OP_ALLOCA";
         case OKM_OP_LOAD:
@@ -91,10 +77,6 @@ static bool okm_is_alu_op(OkmOp const op) {
         case OKM_OP_UDIV:  /* fall through */
         case OKM_OP_SREM:  /* fall through */
         case OKM_OP_UREM:  /* fall through */
-        case OKM_OP_FADD:  /* fall through */
-        case OKM_OP_FSUB:  /* fall through */
-        case OKM_OP_FMUL:  /* fall through */
-        case OKM_OP_FDIV:  /* fall through */
         case OKM_OP_AND:   /* fall through */
         case OKM_OP_OR:    /* fall through */
         case OKM_OP_XOR:   /* fall through */
@@ -103,8 +85,6 @@ static bool okm_is_alu_op(OkmOp const op) {
         case OKM_OP_EXTS:  /* fall through */
         case OKM_OP_EXTZ:  /* fall through */
         case OKM_OP_TRUNC: /* fall through */
-        case OKM_OP_F2I:   /* fall through */
-        case OKM_OP_I2F:   /* fall through */
             return true;
         default:
             return false;
@@ -144,7 +124,7 @@ OkmValue* okm_emit_const_int(OkmContext* const ctx, OkmBlock* const block,
 
     instr->op = OKM_OP_CONST;
     instr->as.imm.dst = dst;
-    instr->as.imm.val.i = val;
+    instr->as.imm.i = val;
 
     return dst;
 }
