@@ -71,7 +71,8 @@ typedef struct OkmInstr {
 
         /* Used for RET */
         struct {
-            OkmValue* val; /* NULL for void return */
+            OkmValue* values[4]; /* NULL for void return */
+            uint32_t value_count;
         } ret;
 
         /* Used for syscall */

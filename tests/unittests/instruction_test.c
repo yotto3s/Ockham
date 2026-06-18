@@ -101,21 +101,23 @@ void test_EmitAlu_InvalidOpReturnsNull(void) {
 
 void test_EmitRet_Op(void) {
     OkmValue* retval = okm_emit_const_int(&ctx, block, 0u);
-    OkmInstr* instr = okm_emit_ret(&ctx, block, retval);
+    OkmInstr* instr = okm_emit_ret(&ctx, block, &retval, 1u);
     TEST_ASSERT_NOT_NULL(instr);
     TEST_ASSERT_EQUAL_INT(OKM_OP_RET, instr->op);
+    TEST_ASSERT_EQUAL_INT(instr->as.ret.value_count, 1u);
 }
 
 void test_EmitRet_Val(void) {
     OkmValue* retval = okm_emit_const_int(&ctx, block, 0u);
-    OkmInstr* instr = okm_emit_ret(&ctx, block, retval);
-    TEST_ASSERT_EQUAL_PTR(retval, instr->as.ret.val);
+    OkmInstr* instr = okm_emit_ret(&ctx, block, &retval, 1u);
+    TEST_ASSERT_EQUAL_INT(instr->as.ret.value_count, 1u);
+    TEST_ASSERT_EQUAL_PTR(retval, instr->as.ret.values[0]);
 }
 
 void test_EmitRet_NullVal(void) {
-    OkmInstr* instr = okm_emit_ret(&ctx, block, NULL);
+    OkmInstr* instr = okm_emit_ret(&ctx, block, NULL, 0u);
     TEST_ASSERT_NOT_NULL(instr);
-    TEST_ASSERT_NULL(instr->as.ret.val);
+    TEST_ASSERT_EQUAL_INT(instr->as.ret.value_count, 0u);
 }
 
 /* --- okm_emit_syscall --- */

@@ -149,10 +149,19 @@ OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
 }
 
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
-                       OkmValue* const val) {
+                       OkmValue** const values, uint32_t value_count) {
+    if (value_count > 4) {
+        fprintf(
+            stderr,
+            "Error: number of return values should be less than 4, got %u\n",
+            value_count);
+    }
     OkmInstr* const instr = okm_alloc_instr(ctx, block);
     instr->op = OKM_OP_RET;
-    instr->as.ret.val = val;
+    for (uint32_t i = 0u; i < value_count; ++i) {
+        instr->as.ret.values[i] = values[i];
+    }
+    instr->as.ret.value_count = value_count;
 
     return instr;
 }

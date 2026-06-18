@@ -82,7 +82,7 @@ OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
                        OkmOp const op, OkmValue* const lhs,
                        OkmValue* const rhs);
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
-                       OkmValue* const val);
+                       OkmValue** const values, uint32_t value_count);
 OkmValue* okm_emit_alloca(OkmContext* const ctx, OkmBlock* const block,
                           const uint32_t bytes);
 OkmValue* okm_emit_load(OkmContext* const ctx, OkmBlock* const block,
