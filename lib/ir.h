@@ -55,25 +55,40 @@ typedef struct OkmInstr {
             uint32_t bytes; /* Size of allocation (for ALLOC only) */
         } mem;
 
-        /* Used for JMP and JNZ */
         struct {
-            OkmValue* cond; /* NULL for unconditional JMP */
+            OkmBlock* target;
+            OkmValue** args;
+            uint32_t arg_count;
+        } jmp;
+
+        /* Used for BRANCH */
+        struct {
+            OkmValue* cond;
 
             OkmBlock* target_true;
             OkmValue** args_true; /* Array of arguments passed to true block */
             uint32_t arg_count_true;
 
-            OkmBlock* target_false; /* NULL if unconditional JMP */
+            OkmBlock* target_false;
             OkmValue**
                 args_false; /* Array of arguments passed to false block */
             uint32_t arg_count_false;
-        } branch;
+        } br;
 
         /* Used for RET */
         struct {
-            OkmValue* values[4]; /* NULL for void return */
+            OkmValue** values; /* NULL for void return */
             uint32_t value_count;
         } ret;
+
+        /* Used for CALL */
+        struct {
+            OkmValue* func;
+            OkmValue** dsts;
+            uint32_t dst_count;
+            OkmValue** args;
+            uint32_t arg_count;
+        } call;
 
         /* Used for syscall */
         struct {
@@ -106,8 +121,9 @@ typedef struct OkmBlock {
 } OkmBlock;
 
 typedef struct OkmFunction {
-    char* name;          /* Interned string pointer */
-    OkmType return_type; /* Can add OKM_TY_VOID if needed */
+    char* name; /* Interned string pointer */
+    OkmType* return_types;
+    uint32_t return_type_count;
 
     /* Standard function arguments */
     OkmValue** params;

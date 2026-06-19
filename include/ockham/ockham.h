@@ -41,8 +41,8 @@ typedef enum {
     OKM_OP_STORE,  /* Writes to pointer */
 
     /* Control Flow */
-    OKM_OP_JMP, /* Unconditional jump */
-    OKM_OP_JNZ, /* Jump if not zero */
+    OKM_OP_JMP,    /* Unconditional jump */
+    OKM_OP_BRANCH, /* Jump if not zero */
     OKM_OP_CALL,
     OKM_OP_RET,
     OKM_OP_SYSCALL
@@ -72,7 +72,8 @@ typedef struct OkmContext OkmContext;
 OkmContext* okm_new_context(const OkmArch arch, const OkmOS os);
 void okm_destroy_context(OkmContext* const ctx);
 OkmFunction* okm_new_function(OkmContext* const ctx, const char* const name,
-                              const OkmType return_type);
+                              const OkmType* return_types,
+                              const uint32_t return_type_count);
 OkmBlock* okm_new_block(OkmContext* const ctx, OkmFunction* const func);
 
 /* Instructions */
@@ -92,13 +93,11 @@ OkmInstr* okm_emit_store(OkmContext* const ctx, OkmBlock* const block,
 OkmInstr* okm_emit_jmp(OkmContext* const ctx, OkmBlock* const block,
                        OkmBlock* const target, OkmValue** const args,
                        const uint32_t arg_count);
-OkmInstr* okm_emit_jnz(OkmContext* const ctx, OkmBlock* const block,
-                       OkmValue* const cond, OkmBlock* const target_true,
-                       OkmValue** const args_true,
-                       const uint32_t arg_count_true,
-                       OkmBlock* const target_false,
-                       OkmValue** const args_false,
-                       const uint32_t arg_count_false);
+OkmInstr* okm_emit_br(OkmContext* const ctx, OkmBlock* const block,
+                      OkmValue* const cond, OkmBlock* const target_true,
+                      OkmValue** const args_true, const uint32_t arg_count_true,
+                      OkmBlock* const target_false, OkmValue** const args_false,
+                      const uint32_t arg_count_false);
 OkmValue* okm_emit_call(OkmContext* const ctx, OkmBlock* const block,
                         const OkmType return_type, OkmValue* const callee,
                         OkmValue** const args, const uint32_t arg_count);

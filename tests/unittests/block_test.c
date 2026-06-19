@@ -9,7 +9,8 @@ static OkmFunction* func;
 
 void setUp(void) {
     okm_arena_init(&ctx.arena);
-    func = okm_new_function(&ctx, "test_func", OKM_TY_I32);
+    const OkmType ret_types[] = {OKM_TY_I32};
+    func = okm_new_function(&ctx, "test_func", ret_types, 1u);
 }
 
 void tearDown(void) { okm_arena_destroy(&ctx.arena); }

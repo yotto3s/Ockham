@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "arena.h"
 #include "context.h"
@@ -55,8 +56,8 @@ static char* okm_op_to_string(OkmOp const op) {
             return "OKM_OP_STORE";
         case OKM_OP_JMP:
             return "OKM_OP_JMP";
-        case OKM_OP_JNZ:
-            return "OKM_OP_JNZ";
+        case OKM_OP_BRANCH:
+            return "OKM_OP_BRANCH";
         case OKM_OP_CALL:
             return "OKM_OP_CALL";
         case OKM_OP_RET:
@@ -150,18 +151,17 @@ OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
 
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
                        OkmValue** const values, uint32_t value_count) {
-    if (value_count > 4) {
-        fprintf(
-            stderr,
-            "Error: number of return values should be less than 4, got %u\n",
-            value_count);
-    }
     OkmInstr* const instr = okm_alloc_instr(ctx, block);
     instr->op = OKM_OP_RET;
-    for (uint32_t i = 0u; i < value_count; ++i) {
-        instr->as.ret.values[i] = values[i];
-    }
     instr->as.ret.value_count = value_count;
+    if (value_count > 0) {
+        instr->as.ret.values = (OkmValue**)okm_arena_alloc(
+            &ctx->arena, sizeof(OkmValue*) * value_count);
+        for (uint32_t i = 0u; i < value_count; ++i) {
+            instr->as.ret.values[i] = values[i];
+        }
+        memcpy(instr->as.ret.values, values, sizeof(OkmValue*) * value_count);
+    }
 
     return instr;
 }
@@ -216,13 +216,11 @@ OkmInstr* okm_emit_jmp(OkmContext* const ctx, OkmBlock* const block,
     return NULL;
 }
 
-OkmInstr* okm_emit_jnz(OkmContext* const ctx, OkmBlock* const block,
-                       OkmValue* const cond, OkmBlock* const target_true,
-                       OkmValue** const args_true,
-                       const uint32_t arg_count_true,
-                       OkmBlock* const target_false,
-                       OkmValue** const args_false,
-                       const uint32_t arg_count_false) {
+OkmInstr* okm_emit_br(OkmContext* const ctx, OkmBlock* const block,
+                      OkmValue* const cond, OkmBlock* const target_true,
+                      OkmValue** const args_true, const uint32_t arg_count_true,
+                      OkmBlock* const target_false, OkmValue** const args_false,
+                      const uint32_t arg_count_false) {
     (void)ctx;
     (void)block;
     (void)cond;

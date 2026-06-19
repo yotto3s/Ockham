@@ -12,7 +12,8 @@ static OkmBlock* block;
 
 void setUp(void) {
     okm_arena_init(&ctx.arena);
-    func = okm_new_function(&ctx, "test_func", OKM_TY_I32);
+    const OkmType ret_types[] = {OKM_TY_I32};
+    func = okm_new_function(&ctx, "test_func", ret_types, 1u);
     block = okm_new_block(&ctx, func);
 }
 
@@ -120,6 +121,20 @@ void test_EmitRet_NullVal(void) {
     TEST_ASSERT_EQUAL_INT(instr->as.ret.value_count, 0u);
 }
 
+void test_EmitRet_MultipleVals(void) {
+    OkmValue* vals[3];
+    vals[0] = okm_emit_const_int(&ctx, block, 10u);
+    vals[1] = okm_emit_const_int(&ctx, block, 20u);
+    vals[2] = okm_emit_const_int(&ctx, block, 30u);
+    OkmInstr* instr = okm_emit_ret(&ctx, block, vals, 3u);
+    TEST_ASSERT_NOT_NULL(instr);
+    TEST_ASSERT_EQUAL_INT(OKM_OP_RET, instr->op);
+    TEST_ASSERT_EQUAL_INT(3u, instr->as.ret.value_count);
+    TEST_ASSERT_EQUAL_PTR(vals[0], instr->as.ret.values[0]);
+    TEST_ASSERT_EQUAL_PTR(vals[1], instr->as.ret.values[1]);
+    TEST_ASSERT_EQUAL_PTR(vals[2], instr->as.ret.values[2]);
+}
+
 /* --- okm_emit_syscall --- */
 
 void test_EmitSyscall_ReturnsNonNull(void) {
@@ -178,6 +193,7 @@ int main(void) {
     RUN_TEST(test_EmitRet_Op);
     RUN_TEST(test_EmitRet_Val);
     RUN_TEST(test_EmitRet_NullVal);
+    RUN_TEST(test_EmitRet_MultipleVals);
     RUN_TEST(test_EmitSyscall_ReturnsNonNull);
     RUN_TEST(test_EmitSyscall_OpcodeAndFields);
     RUN_TEST(test_EmitSyscall_TooManyArgsReturnsNull);

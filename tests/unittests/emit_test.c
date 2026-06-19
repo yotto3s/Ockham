@@ -15,7 +15,8 @@ void test_LowerFunction_MainReturnOne(void) {
     OkmContext* ctx = okm_new_context(OKM_ARCH_X86_64, OKM_OS_LINUX);
     TEST_ASSERT_NOT_NULL(ctx);
 
-    OkmFunction* func = okm_new_function(ctx, "main", OKM_TY_I32);
+    const OkmType ret_types[] = {OKM_TY_I32};
+    OkmFunction* func = okm_new_function(ctx, "main", ret_types, 1u);
     TEST_ASSERT_NOT_NULL(func);
 
     OkmBlock* block = okm_new_block(ctx, func);
