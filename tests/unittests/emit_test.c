@@ -15,19 +15,15 @@ void test_LowerFunction_MainReturnOne(void) {
     OkmContext* ctx = okm_new_context(OKM_ARCH_X86_64, OKM_OS_LINUX);
     TEST_ASSERT_NOT_NULL(ctx);
 
-    const OkmType ret_types[] = {OKM_TY_I32};
-    OkmFunction* func = okm_new_function(ctx, "main", ret_types, 1u);
+    const char* il =
+        "func @main() -> i32 {\n"
+        "^block0:\n"
+        "    %0 = const_int 1 : i32\n"
+        "    ret %0\n"
+        "}\n";
+
+    OkmFunction* func = okm_parse_function(ctx, il);
     TEST_ASSERT_NOT_NULL(func);
-
-    OkmBlock* block = okm_new_block(ctx, func);
-    TEST_ASSERT_NOT_NULL(block);
-
-    OkmValue* ret_val = okm_emit_const_int(ctx, block, 1);
-    TEST_ASSERT_NOT_NULL(ret_val);
-    ret_val->type = OKM_TY_I32;
-
-    OkmInstr* ret_instr = okm_emit_ret(ctx, block, &ret_val, 1);
-    TEST_ASSERT_NOT_NULL(ret_instr);
 
     FILE* fp = tmpfile();
     TEST_ASSERT_NOT_NULL(fp);

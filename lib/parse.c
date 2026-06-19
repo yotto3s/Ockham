@@ -1028,7 +1028,15 @@ OkmFunction* okm_parse_function(OkmContext* const ctx,
         }
     }
 
-    func->next_val_id = regs_cap;
+    uint32_t max_reg_id = 0;
+    for (uint32_t i = 0; i < regs_cap; ++i) {
+        if (regs_arr[i] != NULL) {
+            if (regs_arr[i]->as.reg.id >= max_reg_id) {
+                max_reg_id = regs_arr[i]->as.reg.id + 1;
+            }
+        }
+    }
+    func->next_val_id = max_reg_id;
     uint32_t max_block_id = 0;
     for (uint32_t i = 0; i < blocks_cap; ++i) {
         if (blocks_arr[i] != NULL) {
