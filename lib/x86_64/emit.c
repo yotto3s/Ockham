@@ -6,16 +6,17 @@
 #include "ir.h"
 
 /* Registers for arguments (caller-saved) */
-static char* ARGUMENTS_REG[6] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
+static char* ARGUMENTS_REG64[6] = {"%rdi", "%rsi", "%rdx",
+                                   "%rcx", "%r8",  "%r9"};
 /* Registers for return values (caller-saved) */
-static char* RETURN_VALUE_REG[4] = {"%rax", "%rdx", "%rcx", "r8"};
+static char* RETURN_VALUE_REG64[4] = {"%rax", "%rdx", "%rcx", "r8"};
 /* Registers for temporal values (caller-saved) */
-static char* TMP_REG[2] = {"%r10", "%r11"};
+static char* TMP_REG64[2] = {"%r10", "%r11"};
 /* Registers for general purpose (callee-saved) */
-static char* GENERAL_REG[5] = {"%rbx", "%r12", "%r13", "%r14", "%r15"};
+static char* GENERAL_REG64[5] = {"%rbx", "%r12", "%r13", "%r14", "%r15"};
 /* Registers for base/stack pointer (callee-saved) */
-static char* BASE_POINTER = "%rbp";
-static char* STACK_POINTER = "%rsp";
+static char* BASE_POINTER64 = "%rbp";
+static char* STACK_POINTER64 = "%rsp";
 
 /* 32 bit registers */
 /* Registers for arguments (caller-saved) */
@@ -89,19 +90,19 @@ static void okm_lower_instruction(const OkmContext* const ctx,
             switch (instr->as.imm.dst->type) {
                 case OKM_TY_I8:
                     fprintf(fp, "    movb $%llu, -%d(%s)\n", val, out_off,
-                            BASE_POINTER);
+                            BASE_POINTER64);
                     break;
                 case OKM_TY_I16:
                     fprintf(fp, "    movw $%llu, -%d(%s)\n", val, out_off,
-                            BASE_POINTER);
+                            BASE_POINTER64);
                     break;
                 case OKM_TY_I32:
                     fprintf(fp, "    movl $%llu, -%d(%s)\n", val, out_off,
-                            BASE_POINTER);
+                            BASE_POINTER64);
                     break;
                 case OKM_TY_I64:
                     fprintf(fp, "    movq $%llu, -%d(%s)\n", val, out_off,
-                            BASE_POINTER);
+                            BASE_POINTER64);
                     break;
                 default:
                     fprintf(stderr,
@@ -125,24 +126,24 @@ static void okm_lower_instruction(const OkmContext* const ctx,
                 switch (instr->as.ret.values[i]->type) {
                     case OKM_TY_I8:
                         fprintf(fp, "    movb -%d(%s), %s\n", ret_off,
-                                BASE_POINTER, RETURN_VALUE_REG8[i]);
+                                BASE_POINTER64, RETURN_VALUE_REG8[i]);
                         break;
                     case OKM_TY_I16:
                         fprintf(fp, "    movw -%d(%s), %s\n", ret_off,
-                                BASE_POINTER, RETURN_VALUE_REG16[i]);
+                                BASE_POINTER64, RETURN_VALUE_REG16[i]);
                         break;
                     case OKM_TY_I32:
                         fprintf(fp, "    movl -%d(%s), %s\n", ret_off,
-                                BASE_POINTER, RETURN_VALUE_REG32[i]);
+                                BASE_POINTER64, RETURN_VALUE_REG32[i]);
                         break;
                     case OKM_TY_I64:
                         fprintf(fp, "    movq -%d(%s), %s\n", ret_off,
-                                BASE_POINTER, RETURN_VALUE_REG[i]);
+                                BASE_POINTER64, RETURN_VALUE_REG64[i]);
                         break;
                 }
             }
-            fprintf(fp, "    movq %s, %s\n", BASE_POINTER, STACK_POINTER);
-            fprintf(fp, "    popq %s\n", BASE_POINTER);
+            fprintf(fp, "    movq %s, %s\n", BASE_POINTER64, STACK_POINTER64);
+            fprintf(fp, "    popq %s\n", BASE_POINTER64);
             fprintf(fp, "    ret\n");
             break;
         }
@@ -169,10 +170,10 @@ void okm_lower_function_x86_64(const OkmContext* const ctx,
 
     uint32_t stack_size = get_required_stack_size(func->next_val_id);
 
-    fprintf(fp, "    pushq %s\n", BASE_POINTER);
-    fprintf(fp, "    movq %s, %s\n", STACK_POINTER, BASE_POINTER);
+    fprintf(fp, "    pushq %s\n", BASE_POINTER64);
+    fprintf(fp, "    movq %s, %s\n", STACK_POINTER64, BASE_POINTER64);
     if (stack_size > 0u) {
-        fprintf(fp, "    subq $%d, %s\n", stack_size, STACK_POINTER);
+        fprintf(fp, "    subq $%d, %s\n", stack_size, STACK_POINTER64);
     }
 
     for (const OkmBlock* block = func->block_head; block != NULL;
