@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +8,10 @@
 #include "context.h"
 #include "ir.h"
 #include "ockham/ockham.h"
+
+/* Reasonable upper bounds to prevent capacity-growth integer overflow. */
+#define OKM_MAX_REG_ID UINT32_C(0xFFFFFF)   /* 16 M registers per function */
+#define OKM_MAX_BLOCK_ID UINT32_C(0xFFFF)   /* 64 K blocks per function */
 
 typedef enum {
     TOK_EOF,
@@ -106,6 +111,12 @@ static Token next_token(OkmContext* ctx, const char** src) {
                 val = val * 10 + (*p - '0');
                 p++;
             }
+            if (val > OKM_MAX_REG_ID) {
+                fprintf(stderr, "Error: register id %llu exceeds maximum %u\n",
+                        (uint64_t)val, OKM_MAX_REG_ID);
+                tok.type = TOK_ERROR;
+                return tok;
+            }
             tok.type = TOK_REG;
             tok.length = p - tok.start;
             tok.val_int = val;
@@ -126,6 +137,12 @@ static Token next_token(OkmContext* ctx, const char** src) {
             while (*p >= '0' && *p <= '9') {
                 val = val * 10 + (*p - '0');
                 p++;
+            }
+            if (val > OKM_MAX_BLOCK_ID) {
+                fprintf(stderr, "Error: block id %llu exceeds maximum %u\n",
+                        (uint64_t)val, OKM_MAX_BLOCK_ID);
+                tok.type = TOK_ERROR;
+                return tok;
             }
             tok.type = TOK_BLOCK;
             tok.length = p - tok.start;
@@ -244,7 +261,13 @@ static OkmValue* get_or_create_reg(OkmContext* ctx, uint32_t reg_id,
                                    OkmValue*** regs_arr, uint32_t* regs_cap) {
     if (reg_id >= *regs_cap) {
         uint32_t new_cap = *regs_cap * 2;
-        if (new_cap <= reg_id) new_cap = reg_id + 64;
+        if (new_cap <= reg_id) {
+            if (reg_id > UINT32_MAX - 64) {
+                fprintf(stderr, "Error: register id %u would overflow capacity\n", reg_id);
+                return NULL;
+            }
+            new_cap = reg_id + 64;
+        }
         OkmValue** new_arr =
             okm_arena_alloc(&ctx->arena, sizeof(OkmValue*) * new_cap);
         memset(new_arr, 0, sizeof(OkmValue*) * new_cap);
@@ -271,7 +294,13 @@ static OkmBlock* parse_get_or_create_block(OkmContext* ctx, OkmFunction* func,
                                            uint32_t* blocks_cap) {
     if (block_id >= *blocks_cap) {
         uint32_t new_cap = *blocks_cap * 2;
-        if (new_cap <= block_id) new_cap = block_id + 16;
+        if (new_cap <= block_id) {
+            if (block_id > UINT32_MAX - 16) {
+                fprintf(stderr, "Error: block id %u would overflow capacity\n", block_id);
+                return NULL;
+            }
+            new_cap = block_id + 16;
+        }
         OkmBlock** new_arr =
             okm_arena_alloc(&ctx->arena, sizeof(OkmBlock*) * new_cap);
         memset(new_arr, 0, sizeof(OkmBlock*) * new_cap);
@@ -483,7 +512,12 @@ static bool parse_instruction(OkmContext* ctx, const char** src,
         dst->as.reg.def = instr;
 
         instr->as.mem.dst = dst;
-        instr->as.mem.bytes = tok_bytes.val_int;
+        if (tok_bytes.val_int > UINT32_MAX) {
+            fprintf(stderr, "Error: alloc byte count %llu exceeds maximum %u\n",
+                    (uint64_t)tok_bytes.val_int, UINT32_MAX);
+            return false;
+        }
+        instr->as.mem.bytes = (uint32_t)tok_bytes.val_int;
         instr->as.mem.ptr = NULL;
         instr->as.mem.val = NULL;
         return true;
@@ -959,10 +993,9 @@ OkmFunction* okm_parse_function(OkmContext* const ctx,
 
             if (current_block->prev != NULL ||
                 func->block_head == current_block) {
-                if (func->block_head != current_block ||
-                    current_block->next != NULL) {
-                    return NULL;
-                }
+                fprintf(stderr, "Error: duplicate definition of ^block%u\n",
+                        current_block->id);
+                return NULL;
             }
 
             if (func->block_tail != current_block) {

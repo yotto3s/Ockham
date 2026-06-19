@@ -152,6 +152,58 @@ void test_ParseRoundtrip_BlockArguments(void) {
     assert_roundtrip(il);
 }
 
+void test_ParseRejectsLargeRegisterId(void) {
+    OkmContext* ctx = okm_new_context(OKM_ARCH_X86_64, OKM_OS_LINUX);
+    TEST_ASSERT_NOT_NULL(ctx);
+
+    /* 4294967232 = UINT32_MAX - 63; reg_id + 64 wraps to 0 pre-fix. */
+    const char* il =
+        "func @test(%4294967232 : i32) -> i32 {\n"
+        "^block0:\n"
+        "    ret %4294967232\n"
+        "}\n";
+
+    OkmFunction* func = okm_parse_function(ctx, il);
+    TEST_ASSERT_NULL(func);
+
+    okm_destroy_context(ctx);
+}
+
+void test_ParseRejectsAllocBytesOverflow(void) {
+    OkmContext* ctx = okm_new_context(OKM_ARCH_X86_64, OKM_OS_LINUX);
+    TEST_ASSERT_NOT_NULL(ctx);
+
+    /* 5000000000 > UINT32_MAX; would truncate to 705032704 silently pre-fix. */
+    const char* il =
+        "func @test() {\n"
+        "^block0:\n"
+        "    %0 = alloc 5000000000\n"
+        "    ret \n"
+        "}\n";
+
+    OkmFunction* func = okm_parse_function(ctx, il);
+    TEST_ASSERT_NULL(func);
+
+    okm_destroy_context(ctx);
+}
+
+void test_ParseRejectsDuplicateBlockLabel(void) {
+    OkmContext* ctx = okm_new_context(OKM_ARCH_X86_64, OKM_OS_LINUX);
+    TEST_ASSERT_NOT_NULL(ctx);
+
+    const char* il =
+        "func @test() {\n"
+        "^block0:\n"
+        "^block0:\n"
+        "    ret \n"
+        "}\n";
+
+    OkmFunction* func = okm_parse_function(ctx, il);
+    TEST_ASSERT_NULL(func);
+
+    okm_destroy_context(ctx);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_ParseRoundtrip_Simple);
@@ -163,5 +215,8 @@ int main(void) {
     RUN_TEST(test_ParseRoundtrip_Call);
     RUN_TEST(test_ParseRoundtrip_Syscall);
     RUN_TEST(test_ParseRoundtrip_BlockArguments);
+    RUN_TEST(test_ParseRejectsLargeRegisterId);
+    RUN_TEST(test_ParseRejectsAllocBytesOverflow);
+    RUN_TEST(test_ParseRejectsDuplicateBlockLabel);
     return UNITY_END();
 }
