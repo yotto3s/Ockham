@@ -49,3 +49,16 @@ target_include_directories(emit_test PRIVATE ${UNITTEST_INCLUDE_DIRS})
 target_link_libraries(emit_test PRIVATE ockham unity)
 add_test(NAME emit_test COMMAND emit_test)
 
+# --- print_test ---
+add_executable(print_test print_test.c)
+target_include_directories(print_test PRIVATE ${UNITTEST_INCLUDE_DIRS})
+target_link_libraries(print_test PRIVATE ockham unity)
+add_test(NAME print_test COMMAND print_test)
+
+# --- parse_test ---
+add_executable(parse_test parse_test.c)
+target_include_directories(parse_test PRIVATE ${UNITTEST_INCLUDE_DIRS})
+target_link_libraries(parse_test PRIVATE ockham unity)
+add_test(NAME parse_test COMMAND parse_test)
+
+

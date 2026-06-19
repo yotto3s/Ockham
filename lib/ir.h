@@ -121,7 +121,7 @@ typedef struct OkmBlock {
 } OkmBlock;
 
 typedef struct OkmFunction {
-    char* name; /* Interned string pointer */
+    const char* name; /* Interned string pointer */
     OkmType* return_types;
     uint32_t return_type_count;
 

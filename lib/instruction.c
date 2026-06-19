@@ -207,13 +207,18 @@ OkmInstr* okm_emit_store(OkmContext* const ctx, OkmBlock* const block,
 OkmInstr* okm_emit_jmp(OkmContext* const ctx, OkmBlock* const block,
                        OkmBlock* const target, OkmValue** const args,
                        const uint32_t arg_count) {
-    (void)ctx;
-    (void)block;
-    (void)target;
-    (void)args;
-    (void)arg_count;
-    unimplemented();
-    return NULL;
+    OkmInstr* const instr = okm_alloc_instr(ctx, block);
+    instr->op = OKM_OP_JMP;
+    instr->as.jmp.target = target;
+    instr->as.jmp.arg_count = arg_count;
+    if (arg_count > 0) {
+        instr->as.jmp.args = (OkmValue**)okm_arena_alloc(
+            &ctx->arena, sizeof(OkmValue*) * arg_count);
+        memcpy(instr->as.jmp.args, args, sizeof(OkmValue*) * arg_count);
+    } else {
+        instr->as.jmp.args = NULL;
+    }
+    return instr;
 }
 
 OkmInstr* okm_emit_br(OkmContext* const ctx, OkmBlock* const block,
@@ -221,17 +226,31 @@ OkmInstr* okm_emit_br(OkmContext* const ctx, OkmBlock* const block,
                       OkmValue** const args_true, const uint32_t arg_count_true,
                       OkmBlock* const target_false, OkmValue** const args_false,
                       const uint32_t arg_count_false) {
-    (void)ctx;
-    (void)block;
-    (void)cond;
-    (void)target_true;
-    (void)args_true;
-    (void)arg_count_true;
-    (void)target_false;
-    (void)args_false;
-    (void)arg_count_false;
-    unimplemented();
-    return NULL;
+    OkmInstr* const instr = okm_alloc_instr(ctx, block);
+    instr->op = OKM_OP_BRANCH;
+    instr->as.br.cond = cond;
+    instr->as.br.target_true = target_true;
+    instr->as.br.arg_count_true = arg_count_true;
+    if (arg_count_true > 0) {
+        instr->as.br.args_true = (OkmValue**)okm_arena_alloc(
+            &ctx->arena, sizeof(OkmValue*) * arg_count_true);
+        memcpy(instr->as.br.args_true, args_true,
+               sizeof(OkmValue*) * arg_count_true);
+    } else {
+        instr->as.br.args_true = NULL;
+    }
+
+    instr->as.br.target_false = target_false;
+    instr->as.br.arg_count_false = arg_count_false;
+    if (arg_count_false > 0) {
+        instr->as.br.args_false = (OkmValue**)okm_arena_alloc(
+            &ctx->arena, sizeof(OkmValue*) * arg_count_false);
+        memcpy(instr->as.br.args_false, args_false,
+               sizeof(OkmValue*) * arg_count_false);
+    } else {
+        instr->as.br.args_false = NULL;
+    }
+    return instr;
 }
 
 OkmValue* okm_emit_call(OkmContext* const ctx, OkmBlock* const block,

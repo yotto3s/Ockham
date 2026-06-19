@@ -4,6 +4,8 @@ add_library(ockham STATIC
     instruction.c
     function.c
     block.c
+    print.c
+    parse.c
     x86_64/emit.c
 )
 

@@ -1,6 +1,9 @@
 #ifndef OCKHAM_INCLUDE_OCKHAM_OCKHAM_H_
 #define OCKHAM_INCLUDE_OCKHAM_OCKHAM_H_
 
+#include <stdint.h>
+#include <stdio.h>
+
 /* The only types the IL knows about. Everything is just bits. */
 typedef enum {
     OKM_TY_I8,
@@ -104,5 +107,10 @@ OkmValue* okm_emit_call(OkmContext* const ctx, OkmBlock* const block,
 OkmValue* okm_emit_syscall(OkmContext* const ctx, OkmBlock* const block,
                            OkmValue* const sys_num, OkmValue** const args,
                            const uint32_t arg_count);
+
+/* Printing and Parsing */
+void okm_print_instr(const OkmInstr* const instr, FILE* const fp);
+void okm_print_function(OkmFunction* const func, FILE* const fp);
+OkmFunction* okm_parse_function(OkmContext* const ctx, const char* const input);
 
 #endif /* OCKHAM_INCLUDE_OCKHAM_OCKHAM_H_ */
