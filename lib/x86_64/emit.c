@@ -101,6 +101,7 @@ static void okm_lower_instruction(const OkmContext* const ctx,
                             BASE_POINTER64);
                     break;
                 case OKM_TY_I64:
+                case OKM_TY_PTR:
                     fprintf(fp, "    movq $%llu, -%d(%s)\n", val, out_off,
                             BASE_POINTER64);
                     break;
@@ -137,6 +138,7 @@ static void okm_lower_instruction(const OkmContext* const ctx,
                                 BASE_POINTER64, RETURN_VALUE_REG32[i]);
                         break;
                     case OKM_TY_I64:
+                    case OKM_TY_PTR:
                         fprintf(fp, "    movq -%d(%s), %s\n", ret_off,
                                 BASE_POINTER64, RETURN_VALUE_REG64[i]);
                         break;

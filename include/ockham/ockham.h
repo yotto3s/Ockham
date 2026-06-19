@@ -10,6 +10,7 @@ typedef enum {
     OKM_TY_I16,
     OKM_TY_I32,
     OKM_TY_I64,
+    OKM_TY_PTR,
 } OkmType;
 
 /* Opcodes contain the signedness and operation logic. */

@@ -204,6 +204,18 @@ void test_ParseRejectsDuplicateBlockLabel(void) {
     okm_destroy_context(ctx);
 }
 
+void test_ParseRoundtrip_PtrType(void) {
+    const char* il =
+        "func @ptr_test(%0 : ptr) -> ptr {\n"
+        "^block0:\n"
+        "    %1 = alloc 8\n"
+        "    store %0, %1 : ptr\n"
+        "    %2 = load %1 : ptr\n"
+        "    ret %2\n"
+        "}\n";
+    assert_roundtrip(il);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_ParseRoundtrip_Simple);
@@ -218,5 +230,6 @@ int main(void) {
     RUN_TEST(test_ParseRejectsLargeRegisterId);
     RUN_TEST(test_ParseRejectsAllocBytesOverflow);
     RUN_TEST(test_ParseRejectsDuplicateBlockLabel);
+    RUN_TEST(test_ParseRoundtrip_PtrType);
     return UNITY_END();
 }

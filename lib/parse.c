@@ -10,8 +10,8 @@
 #include "ockham/ockham.h"
 
 /* Reasonable upper bounds to prevent capacity-growth integer overflow. */
-#define OKM_MAX_REG_ID UINT32_C(0xFFFFFF)   /* 16 M registers per function */
-#define OKM_MAX_BLOCK_ID UINT32_C(0xFFFF)   /* 64 K blocks per function */
+#define OKM_MAX_REG_ID UINT32_C(0xFFFFFF) /* 16 M registers per function */
+#define OKM_MAX_BLOCK_ID UINT32_C(0xFFFF) /* 64 K blocks per function */
 
 typedef enum {
     TOK_EOF,
@@ -218,6 +218,11 @@ static Token next_token(OkmContext* ctx, const char** src) {
             tok.val_int = OKM_TY_I64;
             return tok;
         }
+        if (len == 3 && strncmp(start, "ptr", 3) == 0) {
+            tok.type = TOK_TYPE;
+            tok.val_int = OKM_TY_PTR;
+            return tok;
+        }
 
         char* name = okm_arena_alloc(&ctx->arena, len + 1);
         memcpy(name, start, len);
@@ -263,7 +268,9 @@ static OkmValue* get_or_create_reg(OkmContext* ctx, uint32_t reg_id,
         uint32_t new_cap = *regs_cap * 2;
         if (new_cap <= reg_id) {
             if (reg_id > UINT32_MAX - 64) {
-                fprintf(stderr, "Error: register id %u would overflow capacity\n", reg_id);
+                fprintf(stderr,
+                        "Error: register id %u would overflow capacity\n",
+                        reg_id);
                 return NULL;
             }
             new_cap = reg_id + 64;
@@ -296,7 +303,8 @@ static OkmBlock* parse_get_or_create_block(OkmContext* ctx, OkmFunction* func,
         uint32_t new_cap = *blocks_cap * 2;
         if (new_cap <= block_id) {
             if (block_id > UINT32_MAX - 16) {
-                fprintf(stderr, "Error: block id %u would overflow capacity\n", block_id);
+                fprintf(stderr, "Error: block id %u would overflow capacity\n",
+                        block_id);
                 return NULL;
             }
             new_cap = block_id + 16;
@@ -508,7 +516,7 @@ static bool parse_instruction(OkmContext* ctx, const char** src,
         if (!match_token(ctx, src, TOK_INT, &tok_bytes)) return false;
 
         OkmValue* dst = GET_REG(dst_toks[0].val_int);
-        dst->type = OKM_TY_I64;
+        dst->type = OKM_TY_PTR;
         dst->as.reg.def = instr;
 
         instr->as.mem.dst = dst;
@@ -724,7 +732,7 @@ static bool parse_instruction(OkmContext* ctx, const char** src,
         if (match_token(ctx, src, TOK_SYMBOL, &tok_callee)) {
             callee = okm_arena_alloc(&ctx->arena, sizeof(OkmValue));
             callee->kind = OKM_VALUE_KIND_FUNCTION_SYMBOL;
-            callee->type = OKM_TY_I64;
+            callee->type = OKM_TY_PTR;
             callee->as.sym.symbol = tok_callee.str_val;
         } else if (match_token(ctx, src, TOK_REG, &tok_callee)) {
             callee = GET_REG(tok_callee.val_int);

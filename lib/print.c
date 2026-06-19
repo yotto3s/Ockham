@@ -13,6 +13,8 @@ static const char* type_to_str(const OkmType type) {
             return "i32";
         case OKM_TY_I64:
             return "i64";
+        case OKM_TY_PTR:
+            return "ptr";
         default:
             fprintf(stderr, "Unknown type\n");
             return "unknown";
