@@ -204,6 +204,22 @@ void test_ParseRejectsDuplicateBlockLabel(void) {
     okm_destroy_context(ctx);
 }
 
+void test_ParseRejectsTooManyReturnValues(void) {
+    OkmContext* ctx = okm_new_context(OKM_ARCH_X86_64, OKM_OS_LINUX);
+    TEST_ASSERT_NOT_NULL(ctx);
+
+    const char* il =
+        "func @test(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32) {\n"
+        "^block0:\n"
+        "    ret %0, %1, %2, %3, %4\n"
+        "}\n";
+
+    OkmFunction* func = okm_parse_function(ctx, il);
+    TEST_ASSERT_NULL(func);
+
+    okm_destroy_context(ctx);
+}
+
 void test_ParseRoundtrip_PtrType(void) {
     const char* il =
         "func @ptr_test(%0 : ptr) -> ptr {\n"
@@ -230,6 +246,7 @@ int main(void) {
     RUN_TEST(test_ParseRejectsLargeRegisterId);
     RUN_TEST(test_ParseRejectsAllocBytesOverflow);
     RUN_TEST(test_ParseRejectsDuplicateBlockLabel);
+    RUN_TEST(test_ParseRejectsTooManyReturnValues);
     RUN_TEST(test_ParseRoundtrip_PtrType);
     return UNITY_END();
 }

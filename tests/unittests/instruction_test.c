@@ -135,6 +135,15 @@ void test_EmitRet_MultipleVals(void) {
     TEST_ASSERT_EQUAL_PTR(vals[2], instr->as.ret.values[2]);
 }
 
+void test_EmitRet_TooManyVals(void) {
+    OkmValue* vals[5];
+    for (int i = 0; i < 5; ++i) {
+        vals[i] = okm_emit_const_int(&ctx, block, (uint64_t)i);
+    }
+    OkmInstr* instr = okm_emit_ret(&ctx, block, vals, 5u);
+    TEST_ASSERT_NULL(instr);
+}
+
 /* --- okm_emit_syscall --- */
 
 void test_EmitSyscall_ReturnsNonNull(void) {
@@ -194,6 +203,7 @@ int main(void) {
     RUN_TEST(test_EmitRet_Val);
     RUN_TEST(test_EmitRet_NullVal);
     RUN_TEST(test_EmitRet_MultipleVals);
+    RUN_TEST(test_EmitRet_TooManyVals);
     RUN_TEST(test_EmitSyscall_ReturnsNonNull);
     RUN_TEST(test_EmitSyscall_OpcodeAndFields);
     RUN_TEST(test_EmitSyscall_TooManyArgsReturnsNull);

@@ -151,17 +151,17 @@ OkmValue* okm_emit_alu(OkmContext* const ctx, OkmBlock* const block,
 
 OkmInstr* okm_emit_ret(OkmContext* const ctx, OkmBlock* const block,
                        OkmValue** const values, uint32_t value_count) {
+    if (value_count > 4) {
+        fprintf(stderr,
+                "Error: return instruction cannot have more than 4 values\n");
+        return NULL;
+    }
+
     OkmInstr* const instr = okm_alloc_instr(ctx, block);
     instr->op = OKM_OP_RET;
     instr->as.ret.value_count = value_count;
-    if (value_count > 0) {
-        instr->as.ret.values = (OkmValue**)okm_arena_alloc(
-            &ctx->arena, sizeof(OkmValue*) * value_count);
-        for (uint32_t i = 0u; i < value_count; ++i) {
-            instr->as.ret.values[i] = values[i];
-        }
-        memcpy(instr->as.ret.values, values, sizeof(OkmValue*) * value_count);
-    }
+    memset(instr->as.ret.values, 0, sizeof(instr->as.ret.values));
+    memcpy(instr->as.ret.values, values, sizeof(OkmValue*) * value_count);
 
     return instr;
 }

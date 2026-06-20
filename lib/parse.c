@@ -697,21 +697,16 @@ static bool parse_instruction(OkmContext* ctx, const char** src,
         instr->op = OKM_OP_RET;
 
         uint32_t val_count = 0;
-        uint32_t val_cap = 4;
-        OkmValue** values =
-            okm_arena_alloc(&ctx->arena, sizeof(OkmValue*) * val_cap);
-
         while (true) {
             Token tok_val;
             if (match_token(ctx, src, TOK_REG, &tok_val)) {
-                if (val_count >= val_cap) {
-                    val_cap *= 2;
-                    OkmValue** new_values = okm_arena_alloc(
-                        &ctx->arena, sizeof(OkmValue*) * val_cap);
-                    memcpy(new_values, values, sizeof(OkmValue*) * val_count);
-                    values = new_values;
+                if (val_count >= 4) {
+                    fprintf(stderr,
+                            "Error: return instruction cannot have more than 4 "
+                            "values\n");
+                    return false;
                 }
-                values[val_count++] = GET_REG(tok_val.val_int);
+                instr->as.ret.values[val_count++] = GET_REG(tok_val.val_int);
                 if (match_token(ctx, src, TOK_COMMA, NULL)) {
                     continue;
                 }
@@ -719,7 +714,9 @@ static bool parse_instruction(OkmContext* ctx, const char** src,
             break;
         }
 
-        instr->as.ret.values = values;
+        for (uint32_t i = val_count; i < 4; ++i) {
+            instr->as.ret.values[i] = NULL;
+        }
         instr->as.ret.value_count = val_count;
         return true;
     }
