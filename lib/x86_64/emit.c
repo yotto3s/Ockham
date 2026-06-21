@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "helpers.h"
 #include "ir.h"
 
 /* Registers for arguments (caller-saved) */
@@ -179,6 +180,7 @@ static void okm_lower_instruction(const OkmContext* const ctx,
         fprintf(fp, "    mov%c $%llu, -%d(%s)\n",
                 get_op_suffix(instr->as.imm.dst->type), val, out_off,
                 BASE_POINTER64);
+    } else if (is_binary_op(instr->op)) {
     } else if (instr->op == OKM_OP_RET) {
         for (uint32_t i = 0u; i < instr->as.ret.value_count; ++i) {
             if (i >= 4) {

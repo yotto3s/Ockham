@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "helpers.h"
 #include "ir.h"
 #include "ockham/ockham.h"
 
@@ -115,153 +116,126 @@ static void okm_print_unary_op(const OkmInstr* const instr, FILE* const fp) {
 
 void okm_print_instr(const OkmInstr* const instr, FILE* const fp) {
     fprintf(fp, "    ");
-    switch (instr->op) {
-        case OKM_OP_CONST:
-            okm_print_value(instr->as.imm.dst, fp);
-            fprintf(fp, " = const_int %llu : %s\n", instr->as.imm.i,
-                    type_to_str(instr->as.imm.dst->type));
-            break;
-        case OKM_OP_ADD:
-        case OKM_OP_SUB:
-        case OKM_OP_MUL:
-        case OKM_OP_SDIV:
-        case OKM_OP_UDIV:
-        case OKM_OP_SREM:
-        case OKM_OP_UREM:
-        case OKM_OP_AND:
-        case OKM_OP_OR:
-        case OKM_OP_XOR:
-        case OKM_OP_SHL:
-        case OKM_OP_SHR:
-            okm_print_binary_op(instr, fp);
-            break;
-        case OKM_OP_EXTS:
-        case OKM_OP_EXTZ:
-        case OKM_OP_TRUNC:
-            okm_print_unary_op(instr, fp);
-            break;
-        case OKM_OP_ALLOCA:
-            okm_print_value(instr->as.mem.dst, fp);
-            fprintf(fp, " = alloc %u\n", instr->as.mem.bytes);
-            break;
-        case OKM_OP_LOAD:
-            okm_print_value(instr->as.mem.dst, fp);
-            fprintf(fp, " = load ");
-            okm_print_value(instr->as.mem.ptr, fp);
-            fprintf(fp, " : %s\n", type_to_str(instr->as.mem.dst->type));
-            break;
-        case OKM_OP_STORE:
-            fprintf(fp, "store ");
-            okm_print_value(instr->as.mem.val, fp);
-            fprintf(fp, ", ");
-            okm_print_value(instr->as.mem.ptr, fp);
-            fprintf(fp, " : %s\n", type_to_str(instr->as.mem.val->type));
-            break;
-        case OKM_OP_JMP:
-            fprintf(fp, "jmp ^block%u", instr->as.jmp.target->id);
-            if (instr->as.jmp.arg_count > 0u) {
-                fprintf(fp, "(");
-                for (uint32_t i = 0u; i < instr->as.jmp.arg_count; ++i) {
-                    if (i > 0u) {
-                        fprintf(fp, ", ");
-                    }
-                    okm_print_value(instr->as.jmp.args[i], fp);
-                }
-                fprintf(fp, ")");
-            }
-            fprintf(fp, "\n");
-            break;
-        case OKM_OP_BRANCH:
-            fprintf(fp, "br ");
-            okm_print_value(instr->as.br.cond, fp);
-            fprintf(fp, ", ^block%u", instr->as.br.target_true->id);
-            if (instr->as.br.arg_count_true > 0u) {
-                fprintf(fp, "(");
-                for (uint32_t i = 0u; i < instr->as.br.arg_count_true; ++i) {
-                    if (i > 0u) {
-                        fprintf(fp, ", ");
-                    }
-                    okm_print_value(instr->as.br.args_true[i], fp);
-                }
-                fprintf(fp, ")");
-            }
-            fprintf(fp, ", ^block%u", instr->as.br.target_false->id);
-            if (instr->as.br.arg_count_false > 0u) {
-                fprintf(fp, "(");
-                for (uint32_t i = 0u; i < instr->as.br.arg_count_false; ++i) {
-                    if (i > 0u) {
-                        fprintf(fp, ", ");
-                    }
-                    okm_print_value(instr->as.br.args_false[i], fp);
-                }
-                fprintf(fp, ")");
-            }
-            fprintf(fp, "\n");
-            break;
-        case OKM_OP_CALL:
-            if (instr->as.call.dst_count > 0u) {
-                for (uint32_t i = 0u; i < instr->as.call.dst_count; ++i) {
-                    if (i > 0u) {
-                        fprintf(fp, ", ");
-                    }
-                    okm_print_value(instr->as.call.dsts[i], fp);
-                }
-                fprintf(fp, " = ");
-            }
-            fprintf(fp, "call ");
-            okm_print_value(instr->as.call.func, fp);
+    if (instr->op == OKM_OP_CONST) {
+        okm_print_value(instr->as.imm.dst, fp);
+        fprintf(fp, " = const_int %llu : %s\n", instr->as.imm.i,
+                type_to_str(instr->as.imm.dst->type));
+    } else if (is_binary_op(instr->op)) {
+        okm_print_binary_op(instr, fp);
+    } else if (is_unary_op(instr->op)) {
+        okm_print_unary_op(instr, fp);
+    } else if (instr->op == OKM_OP_ALLOCA) {
+        okm_print_value(instr->as.mem.dst, fp);
+        fprintf(fp, " = alloc %u\n", instr->as.mem.bytes);
+    } else if (instr->op == OKM_OP_LOAD) {
+        okm_print_value(instr->as.mem.dst, fp);
+        fprintf(fp, " = load ");
+        okm_print_value(instr->as.mem.ptr, fp);
+        fprintf(fp, " : %s\n", type_to_str(instr->as.mem.dst->type));
+    } else if (instr->op == OKM_OP_STORE) {
+        fprintf(fp, "store ");
+        okm_print_value(instr->as.mem.val, fp);
+        fprintf(fp, ", ");
+        okm_print_value(instr->as.mem.ptr, fp);
+        fprintf(fp, " : %s\n", type_to_str(instr->as.mem.val->type));
+    } else if (instr->op == OKM_OP_JMP) {
+        fprintf(fp, "jmp ^block%u", instr->as.jmp.target->id);
+        if (instr->as.jmp.arg_count > 0u) {
             fprintf(fp, "(");
-            for (uint32_t i = 0u; i < instr->as.call.arg_count; ++i) {
-                okm_print_value(instr->as.call.args[i], fp);
-                if (i < instr->as.call.arg_count - 1u) {
+            for (uint32_t i = 0u; i < instr->as.jmp.arg_count; ++i) {
+                if (i > 0u) {
                     fprintf(fp, ", ");
                 }
+                okm_print_value(instr->as.jmp.args[i], fp);
             }
             fprintf(fp, ")");
+        }
+        fprintf(fp, "\n");
+    } else if (instr->op == OKM_OP_BRANCH) {
+        fprintf(fp, "br ");
+        okm_print_value(instr->as.br.cond, fp);
+        fprintf(fp, ", ^block%u", instr->as.br.target_true->id);
+        if (instr->as.br.arg_count_true > 0u) {
+            fprintf(fp, "(");
+            for (uint32_t i = 0u; i < instr->as.br.arg_count_true; ++i) {
+                if (i > 0u) {
+                    fprintf(fp, ", ");
+                }
+                okm_print_value(instr->as.br.args_true[i], fp);
+            }
+            fprintf(fp, ")");
+        }
+        fprintf(fp, ", ^block%u", instr->as.br.target_false->id);
+        if (instr->as.br.arg_count_false > 0u) {
+            fprintf(fp, "(");
+            for (uint32_t i = 0u; i < instr->as.br.arg_count_false; ++i) {
+                if (i > 0u) {
+                    fprintf(fp, ", ");
+                }
+                okm_print_value(instr->as.br.args_false[i], fp);
+            }
+            fprintf(fp, ")");
+        }
+        fprintf(fp, "\n");
+    } else if (instr->op == OKM_OP_CALL) {
+        if (instr->as.call.dst_count > 0u) {
             for (uint32_t i = 0u; i < instr->as.call.dst_count; ++i) {
-                if (i == 0u) {
-                    fprintf(fp, " : ");
-                } else {
-                    fprintf(fp, ", ");
-                }
-                fprintf(fp, "%s", type_to_str(instr->as.call.dsts[i]->type));
-            }
-            fprintf(fp, "\n");
-            break;
-        case OKM_OP_RET:
-            fprintf(fp, "ret ");
-            for (uint32_t i = 0u; i < instr->as.ret.value_count; ++i) {
                 if (i > 0u) {
                     fprintf(fp, ", ");
                 }
-                okm_print_value(instr->as.ret.values[i], fp);
+                okm_print_value(instr->as.call.dsts[i], fp);
             }
-            fprintf(fp, "\n");
-            break;
-        case OKM_OP_SYSCALL:
-            if (instr->as.syscall.dst) {
-                okm_print_value(instr->as.syscall.dst, fp);
-                fprintf(fp, " = ");
+            fprintf(fp, " = ");
+        }
+        fprintf(fp, "call ");
+        okm_print_value(instr->as.call.func, fp);
+        fprintf(fp, "(");
+        for (uint32_t i = 0u; i < instr->as.call.arg_count; ++i) {
+            okm_print_value(instr->as.call.args[i], fp);
+            if (i < instr->as.call.arg_count - 1u) {
+                fprintf(fp, ", ");
             }
-            fprintf(fp, "syscall ");
-            okm_print_value(instr->as.syscall.sys_num, fp);
-            fprintf(fp, "(");
-            for (uint32_t i = 0u; i < instr->as.syscall.arg_count; ++i) {
-                if (i > 0u) {
-                    fprintf(fp, ", ");
-                }
-                okm_print_value(instr->as.syscall.args[i], fp);
+        }
+        fprintf(fp, ")");
+        for (uint32_t i = 0u; i < instr->as.call.dst_count; ++i) {
+            if (i == 0u) {
+                fprintf(fp, " : ");
+            } else {
+                fprintf(fp, ", ");
             }
-            fprintf(fp, ")");
-            if (instr->as.syscall.dst) {
-                fprintf(fp, " : %s", type_to_str(instr->as.syscall.dst->type));
+            fprintf(fp, "%s", type_to_str(instr->as.call.dsts[i]->type));
+        }
+        fprintf(fp, "\n");
+    } else if (instr->op == OKM_OP_RET) {
+        fprintf(fp, "ret ");
+        for (uint32_t i = 0u; i < instr->as.ret.value_count; ++i) {
+            if (i > 0u) {
+                fprintf(fp, ", ");
             }
-            fprintf(fp, "\n");
-            break;
-        default:
-            fprintf(stderr, "Unknown op\n");
-            break;
+            okm_print_value(instr->as.ret.values[i], fp);
+        }
+        fprintf(fp, "\n");
+    } else if (instr->op == OKM_OP_SYSCALL) {
+        if (instr->as.syscall.dst) {
+            okm_print_value(instr->as.syscall.dst, fp);
+            fprintf(fp, " = ");
+        }
+        fprintf(fp, "syscall ");
+        okm_print_value(instr->as.syscall.sys_num, fp);
+        fprintf(fp, "(");
+        for (uint32_t i = 0u; i < instr->as.syscall.arg_count; ++i) {
+            if (i > 0u) {
+                fprintf(fp, ", ");
+            }
+            okm_print_value(instr->as.syscall.args[i], fp);
+        }
+        fprintf(fp, ")");
+        if (instr->as.syscall.dst) {
+            fprintf(fp, " : %s", type_to_str(instr->as.syscall.dst->type));
+        }
+        fprintf(fp, "\n");
     }
+    fprintf(stderr, "Unknown op\n");
 }
 
 void okm_print_function(OkmFunction* const func, FILE* const fp) {
