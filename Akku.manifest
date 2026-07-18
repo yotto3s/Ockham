@@ -1,0 +1,9 @@
+#!r6rs ; -*- mode: scheme; coding: utf-8 -*-
+(import (akku format manifest))
+
+(akku-package ("ockham" "1.0.0-alpha.0")
+  (synopsis "S-expression based compiler")
+  (authors "yotto3s")
+  (license "MIT")
+  (depends ("ufo-match" "^1.0.0") ("chez-srfi" ">=0.0.0-akku <1.0.0"))
+)
