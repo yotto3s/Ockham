@@ -126,13 +126,15 @@
     (test-equal #f (operation-parent op))))
 
 (test-group "block-parsing"
-  (let* ((block-lst '(block
+  (let* ((block-lst '(block bb0
                       (%res = (test-op 42) attr1)
                       ((test-op 100))))
-         (blk (read-block block-lst #f)))
+         (blk (block-deserialize block-lst)))
     (test-assert (block? blk))
     (test-equal #f (block-parent blk))
-    (let ((ops (block-ops blk)))
+    (let ((name (block-name blk))
+          (ops (block-ops blk)))
+      (test-equal 'bb0 name)
       (test-equal 2 (length ops))
       (let ((op1 (car ops))
             (op2 (cadr ops)))
@@ -142,7 +144,7 @@
         (test-assert (operation? op2))
         (test-equal 'test-op (operation-op-type op2))
         (test-equal blk (operation-parent op2)))))
-  (test-assert (not (read-block '(not-a-block) #f))))
+  (test-assert (not (block-deserialize '(not-a-block)))))
 
 (test-group "region-parsing"
   (let* ((region-lst '(region
@@ -150,7 +152,7 @@
                          (%res = (test-op 42)))
                        (block
                          ((test-op 100)))))
-         (reg (read-region region-lst #f)))
+         (reg (region-deserialize region-lst)))
     (test-assert (region? reg))
     (test-equal #f (region-parent reg))
     (set-region-parent! reg 'new-parent)
@@ -174,7 +176,23 @@
           (set-block-ops! blk1 '())
           (test-equal '() (block-ops blk1))
           (set-block-ops! blk1 ops)))))
-  (test-assert (not (read-region '(not-a-region) #f))))
+  (test-assert (not (region-deserialize '(not-a-region)))))
+
+(test-group "block-serialization"
+  (let* ((block-lst '(block bb0
+                      (%res = (test-op 42) attr1)
+                      ((test-op 100))))
+         (blk (block-deserialize block-lst)))
+    (test-equal block-lst (block-serialize blk))))
+
+(test-group "region-serialization"
+  (let* ((region-lst '(region
+                       (block bb0
+                         (%res = (test-op 42)))
+                       (block bb1
+                         ((test-op 100)))))
+         (reg (region-deserialize region-lst)))
+    (test-equal region-lst (region-serialize reg))))
 
 (test-end "ockham-core")
 

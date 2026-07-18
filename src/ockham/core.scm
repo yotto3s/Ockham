@@ -18,16 +18,16 @@
 
     region make-region region?
     region-blocks set-region-blocks! region-parent set-region-parent!
-    read-region
+    region-serialize region-deserialize
 
     block make-block block?
-    block-ops set-block-ops! block-parent set-block-parent!
-    read-block
+    block-name block-ops set-block-ops! block-parent set-block-parent!
+    block-serialize block-deserialize
 
     operation make-operation operation?
     operation-op-type operation-op operation-targets
     operation-attributes operation-parent
-    read-operation
+    read-operation operation-serialize
 
     abi make-abi abi?
     abi-general-registers abi-caller-saved abi-callee-saved
@@ -112,28 +112,36 @@
       (mutable blocks region-blocks set-region-blocks!)
       (mutable parent region-parent set-region-parent!)))
 
-  (define (read-region lst parent)
-    (if (eq? (car lst) 'region)
-      (let ((region (make-region #f parent)))
-        (set-region-blocks!
-          region (map (lambda (block) (read-block block region)) (cdr lst)))
-        region)
-      #f))
+  (define region-deserialize
+    (case-lambda
+      ((lst) (region-deserialize lst #f))
+      ((lst parent)
+       (if (eq? (car lst) 'region)
+         (let ((region (make-region #f parent)))
+           (set-region-blocks!
+             region (map (lambda (block) (block-deserialize block region)) (cdr lst)))
+           region)
+         #f))))
 
 
   ;; Block
   (define-record-type (block make-block block?)
     (fields
+      (immutable name block-name)
       (mutable ops block-ops set-block-ops!)
       (mutable parent block-parent set-block-parent!)))
 
-  (define (read-block lst parent)
-    (if (eq? (car lst) 'block)
-      (let ((block (make-block #f parent)))
-        (set-block-ops!
-          block (map (lambda (op) (read-operation op block)) (cdr lst)))
-        block)
-      #f))
+  (define block-deserialize
+    (case-lambda
+      ((lst) (block-deserialize lst #f))
+      ((lst parent)
+       (if (eq? (car lst) 'block)
+         (let* ((name (cadr lst))
+                (block (make-block name #f parent)))
+           (set-block-ops!
+             block (map (lambda (op) (read-operation op block)) (cddr lst)))
+           block)
+         #f))))
 
   ;; Operation
   (define-record-type (operation make-operation operation?)
@@ -162,6 +170,26 @@
                (op (deserialize-op op-type arguments))
                (attributes (cdr operation)))
            (make-operation op-type op targets attributes parent)))))
+
+  (define (operation-serialize op)
+    (let* ((op-type (operation-op-type op))
+           (inner-op (operation-op op))
+           (serialized-op (serialize-op op-type inner-op))
+           (targets (operation-targets op))
+           (attributes (operation-attributes op))
+           (op-part (cons serialized-op attributes)))
+      (if (null? targets)
+          op-part
+          (append targets (cons '= op-part)))))
+
+  (define (block-serialize block)
+    (cons 'block
+          (cons (block-name block)
+                (map operation-serialize (block-ops block)))))
+
+  (define (region-serialize region)
+    (cons 'region
+          (map block-serialize (region-blocks region))))
 
   (define-record-type (abi make-abi abi?)
     (fields
