@@ -18,32 +18,34 @@
 (define (test-op-serialize op)
   `(test-op ,(test-op-value op)))
 
-(define (test-op-deserialize args)
-  (if (eq? (length args) 1)
-    (make-test-op (car args))
+(define (test-op-deserialize lst)
+  (if (and (list? lst)
+           (eq? (length lst) 2)
+           (or (eq? (car lst) 'test-op) (eq? (car lst) 'temp-op)))
+    (make-test-op (cadr lst))
     #f))
 
 (test-op-serialize (make-test-op 1))
-(test-op-deserialize '(1))
+(test-op-deserialize '(test-op 1))
 
 (test-group "op-registration"
-  (test-assert (not (deserialize-op 'test-op-fail '(1))))
+  (test-assert (not (deserialize-op '(test-op-fail 1))))
   (test-assert (not (serialize-op 'test-op-fail '(1 2 3))))
   (let ((op (make-test-op 1)))
     (register-op 'test-op test-op-serialize test-op-deserialize)
     (test-equal '(test-op 1) (serialize-op 'test-op op))
     (test-assert
       (test-op=? (make-test-op 1)
-                 (deserialize-op 'test-op '(1))))
+                 (deserialize-op '(test-op 1))))
     ;; Test unregister-op with a temporary operator
     (register-op 'temp-op test-op-serialize test-op-deserialize)
     (test-equal '(test-op 1) (serialize-op 'temp-op op))
     (test-assert
       (test-op=? (make-test-op 1)
-                 (deserialize-op 'temp-op '(1))))
+                 (deserialize-op '(temp-op 1))))
     (unregister-op 'temp-op)
     (test-assert (not (serialize-op 'temp-op op)))
-    (test-assert (not (deserialize-op 'temp-op '(1))))))
+    (test-assert (not (deserialize-op '(temp-op 1))))))
 
 (test-group "int"
   (let ((i (make-int 32)))

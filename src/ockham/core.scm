@@ -53,11 +53,14 @@
         ((cadr entry) op)
         #f)))
 
-  (define (deserialize-op op-type arguments)
-    (let ((entry (assoc op-type *op-types*)))
-      (if entry
-        ((caddr entry) arguments)
-        #f)))
+  (define (deserialize-op lst)
+    (if (and (list? lst) (not (null? lst)))
+      (let* ((op-type (car lst))
+             (entry (assoc op-type *op-types*)))
+        (if entry
+          ((caddr entry) lst)
+          #f))
+      #f))
 
   ;; okm Types
   ;; Integer
@@ -165,9 +168,9 @@
         (if (null? rest)
           (values '() front)
           (values front (cdr rest)))))
-        (let* ((op-type (caar operation))
-               (arguments (cdar operation))
-               (op (deserialize-op op-type arguments))
+        (let* ((op-part (car operation))
+               (op-type (car op-part))
+               (op (deserialize-op op-part))
                (attributes (cdr operation)))
            (make-operation op-type op targets attributes parent)))))
 
