@@ -1,62 +1,62 @@
 (library (ockham backend)
   (export constant make-constant constant?
-          constant-type constant-value
+          constant-value
           constant-serialize constant-deserialize
 
           copy make-copy copy?
-          copy-type copy-operand
+          copy-operand
           copy-serialize copy-deserialize
 
           add make-add add?
-          add-type add-lhs add-rhs
+          add-lhs add-rhs
           add-serialize add-deserialize
 
           sub make-sub sub?
-          sub-type sub-lhs sub-rhs
+          sub-lhs sub-rhs
           sub-serialize sub-deserialize
 
           mul make-mul mul?
-          mul-type mul-lhs mul-rhs
+          mul-lhs mul-rhs
           mul-serialize mul-deserialize
 
           idiv make-idiv idiv?
-          idiv-type idiv-lhs idiv-rhs
+          idiv-lhs idiv-rhs
           idiv-serialize idiv-deserialize
 
           udiv make-udiv udiv?
-          udiv-type udiv-lhs udiv-rhs
+          udiv-lhs udiv-rhs
           udiv-serialize udiv-deserialize
 
           lshift make-lshift lshift?
-          lshift-type lshift-lhs lshift-rhs
+          lshift-lhs lshift-rhs
           lshift-serialize lshift-deserialize
 
           rshift make-rshift rshift?
-          rshift-type rshift-lhs rshift-rhs
+          rshift-lhs rshift-rhs
           rshift-serialize rshift-deserialize
 
           irem make-irem irem?
-          irem-type irem-lhs irem-rhs
+          irem-lhs irem-rhs
           irem-serialize irem-deserialize
 
           urem make-urem urem?
-          urem-type urem-lhs urem-rhs
+          urem-lhs urem-rhs
           urem-serialize urem-deserialize
 
           sext make-sext sext?
-          sext-type sext-operand
+          sext-operand
           sext-serialize sext-deserialize
 
           zext make-zext zext?
-          zext-type zext-operand
+          zext-operand
           zext-serialize zext-deserialize
 
           load make-load load?
-          load-type load-ptr load-offset
+          load-ptr load-offset
           load-serialize load-deserialize
 
           store make-store store?
-          store-type store-ptr store-val store-offset
+          store-ptr store-val store-offset
           store-serialize store-deserialize
 
           jmp make-jmp jmp?
@@ -85,81 +85,67 @@
 
   (define-dialect-op (be constant)
     (fields
-      (immutable type constant-type)
       (immutable value constant-value))
     (serializer
       (lambda (op)
-        `(_ ,(constant-value op) : ,(serialize-type (constant-type op)))))
+        `(_ ,(constant-value op))))
     (deserializer
       (lambda (lst)
         (match lst
-          ((_ value ': ty)
-           (let ((t (deserialize-type ty)))
-             (okm-assert-guard (t) (make-constant t value))))
+          ((_ value) (make-constant value))
           (_ #f)))))
 
   (define-dialect-op (be copy)
     (fields
-      (immutable type copy-type)
       (immutable operand copy-operand))
     (serializer
       (lambda (op)
         (okm-assert (valid-register-name? (copy-operand op)))
-        `(_ ,(copy-operand op) : ,(serialize-type (copy-type op)))))
+        `(_ ,(copy-operand op))))
     (deserializer
       (lambda (lst)
         (match lst
-          ((_ operand ': ty)
-           (let ((t (deserialize-type ty)))
-             (okm-assert-guard
-               (t
-                (valid-register-name? operand))
-               (make-copy t operand))))
+          ((_ operand)
+           (okm-assert-guard
+             ((valid-register-name? operand))
+             (make-copy operand)))
           (_ #f)))))
-
-  (define (int-or-ptr? t) (or (int? t) (ptr? t)))
 
   (define-syntax define-binary-op
     (lambda (stx)
       (syntax-case stx ()
-        ((_ name type-pred)
+        ((_ name)
          (let* ((name-sym (syntax->datum #'name))
                 (str (symbol->string name-sym))
                 (make-sym (string->symbol (string-append "make-" str)))
-                (type-sym (string->symbol (string-append str "-type")))
                 (lhs-sym (string->symbol (string-append str "-lhs")))
                 (rhs-sym (string->symbol (string-append str "-rhs"))))
            (with-syntax ((make-op (datum->syntax #'name make-sym))
-                         (op-type (datum->syntax #'name type-sym))
                          (op-lhs (datum->syntax #'name lhs-sym))
                          (op-rhs (datum->syntax #'name rhs-sym)))
              #'(define-dialect-op (be name)
                  (fields
-                   (immutable type op-type)
                    (immutable lhs op-lhs)
                    (immutable rhs op-rhs))
                  (serializer
                    (lambda (op)
-                     (okm-assert (type-pred (op-type op)))
                      (okm-assert (valid-register-name? (op-lhs op)))
                      (okm-assert (valid-register-name? (op-rhs op)))
-                     `(_ ,(op-lhs op) ,(op-rhs op) : ,(serialize-type (op-type op)))))
+                     `(_ ,(op-lhs op) ,(op-rhs op))))
                  (deserializer
                    (lambda (lst)
                      (match lst
-                       ((_ lhs rhs ': ty)
-                        (let ((t (deserialize-type ty)))
-                          (okm-assert-guard
-                            ((and t (type-pred t))
-                             (valid-register-name? lhs)
-                             (valid-register-name? rhs))
-                            (make-op t lhs rhs))))
+                       ((_ lhs rhs)
+                        (okm-assert-guard
+                          ((valid-register-name? lhs)
+                           (valid-register-name? rhs))
+                          (make-op lhs rhs)))
                        (_ #f)))))))))))
 
   (define-syntax define-binary-ops
     (syntax-rules ()
-      ((_ (op pred) ...)
-       (begin (define-binary-op op pred) ...))))
+      ((_ op ...)
+       (begin (define-binary-op op) ...))))
 
   (define-syntax define-extension-op
     (lambda (stx)
@@ -168,76 +154,55 @@
          (let* ((name-sym (syntax->datum #'name))
                 (str (symbol->string name-sym))
                 (make-sym (string->symbol (string-append "make-" str)))
-                (type-sym (string->symbol (string-append str "-type")))
                 (operand-sym (string->symbol (string-append str "-operand"))))
            (with-syntax ((make-op (datum->syntax #'name make-sym))
-                         (op-type (datum->syntax #'name type-sym))
                          (op-operand (datum->syntax #'name operand-sym)))
              #'(define-dialect-op (be name)
                  (fields
-                   (immutable type op-type)
                    (immutable operand op-operand))
                  (serializer
                    (lambda (op)
-                     (okm-assert (int? (op-type op)))
                      (okm-assert (valid-register-name? (op-operand op)))
-                     `(_ ,(op-operand op) : ,(serialize-type (op-type op)))))
+                     `(_ ,(op-operand op))))
                  (deserializer
                    (lambda (lst)
                      (match lst
-                       ((_ operand ': ty)
-                        (let ((t (deserialize-type ty)))
-                          (okm-assert-guard
-                            ((and t (int? t))
-                             (valid-register-name? operand))
-                            (make-op t operand))))
+                       ((_ operand)
+                        (okm-assert-guard
+                          ((valid-register-name? operand))
+                          (make-op operand)))
                        (_ #f)))))))))))
 
-  (define-binary-ops
-    (add int-or-ptr?)
-    (sub int-or-ptr?)
-    (mul int?)
-    (idiv int?)
-    (udiv int?)
-    (lshift int?)
-    (rshift int?)
-    (irem int?)
-    (urem int?))
+  (define-binary-ops add sub mul idiv udiv lshift rshift irem urem)
 
   (define-extension-op sext)
   (define-extension-op zext)
 
   (define-dialect-op (be load)
     (fields
-      (immutable type load-type)
       (immutable ptr load-ptr)
       (immutable offset load-offset))
     (serializer
       (lambda (op)
         (okm-assert (valid-register-name? (load-ptr op)))
         (if (and (load-offset op) (not (zero? (load-offset op))))
-            `(_ ,(load-ptr op) ,(load-offset op) : ,(serialize-type (load-type op)))
-            `(_ ,(load-ptr op) : ,(serialize-type (load-type op))))))
+            `(_ ,(load-ptr op) ,(load-offset op))
+            `(_ ,(load-ptr op)))))
     (deserializer
       (lambda (lst)
         (match lst
-          ((_ ptr offset ': ty)
-           (let ((t (deserialize-type ty)))
-             (okm-assert-guard
-               (t
-                (valid-register-name? ptr))
-               (make-load t ptr offset))))
-          ((_ ptr ': ty)
-           (let ((t (deserialize-type ty)))
-             (okm-assert-guard
-               (t
-                (valid-register-name? ptr))
-               (make-load t ptr 0))))
+          ((_ ptr offset)
+           (okm-assert-guard
+             ((valid-register-name? ptr))
+             (make-load ptr offset)))
+          ((_ ptr)
+           (okm-assert-guard
+             ((valid-register-name? ptr))
+             (make-load ptr 0)))
           (_ #f)))))
 
   (define-dialect-op (be store)
     (fields
-      (immutable type store-type)
       (immutable ptr store-ptr)
       (immutable val store-val)
       (immutable offset store-offset))
@@ -246,25 +211,21 @@
         (okm-assert (valid-register-name? (store-ptr op)))
         (okm-assert (valid-register-name? (store-val op)))
         (if (and (store-offset op) (not (zero? (store-offset op))))
-            `(_ ,(store-ptr op) ,(store-val op) ,(store-offset op) : ,(serialize-type (store-type op)))
-            `(_ ,(store-ptr op) ,(store-val op) : ,(serialize-type (store-type op))))))
+            `(_ ,(store-ptr op) ,(store-val op) ,(store-offset op))
+            `(_ ,(store-ptr op) ,(store-val op)))))
     (deserializer
       (lambda (lst)
         (match lst
-          ((_ ptr val offset ': ty)
-           (let ((t (deserialize-type ty)))
-             (okm-assert-guard
-               (t
-                (valid-register-name? ptr)
-                (valid-register-name? val))
-               (make-store t ptr val offset))))
-          ((_ ptr val ': ty)
-           (let ((t (deserialize-type ty)))
-             (okm-assert-guard
-               (t
-                (valid-register-name? ptr)
-                (valid-register-name? val))
-               (make-store t ptr val 0))))
+          ((_ ptr val offset)
+           (okm-assert-guard
+             ((valid-register-name? ptr)
+              (valid-register-name? val))
+             (make-store ptr val offset)))
+          ((_ ptr val)
+           (okm-assert-guard
+             ((valid-register-name? ptr)
+              (valid-register-name? val))
+             (make-store ptr val 0)))
           (_ #f)))))
 
   (define-dialect-op (be jmp)

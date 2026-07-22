@@ -21,21 +21,18 @@
 (test-begin "ockham-backend")
 
 (test-group "be:constant-serialization"
-  (let* ((c (make-constant (make-int 32) 100))
+  (let* ((c (make-constant 100))
          (s (constant-serialize c))
          (d (constant-deserialize s)))
-    (test-equal '(be:constant 100 : (int 32)) s)
+    (test-equal '(be:constant 100) s)
     (test-assert (constant? d))
-    (test-equal 100 (constant-value d))
-    (test-equal 32 (int-size (constant-type d)))))
+    (test-equal 100 (constant-value d))))
 
 (test-group "be:constant-deserialization-invalid"
-  (test-assert (not (constant-deserialize '(be:constant 42))))
-  (test-assert (not (constant-deserialize '(be:constant 42 :))))
-  (test-assert (not (constant-deserialize '(invalid-op 42 : (int 32))))))
+  (test-assert (not (constant-deserialize '(be:constant)))))
 
 (test-group "be:constant-core-integration"
-  (let* ((op-sexp '(%res = (be:constant 42 : (int 32))))
+  (let* ((op-sexp '(%res = (be:constant 42)))
          (op (read-operation op-sexp #f)))
     (test-assert (operation? op))
     (test-equal 'be:constant (operation-op-type op))
@@ -44,60 +41,53 @@
     (test-equal op-sexp (operation-serialize op))))
 
 (test-group "be:copy-serialization"
-  (let* ((c (make-copy (make-int 32) '%a))
+  (let* ((c (make-copy '%a))
          (s (copy-serialize c))
          (d (copy-deserialize s)))
-    (test-equal '(be:copy %a : (int 32)) s)
+    (test-equal '(be:copy %a) s)
     (test-assert (copy? d))
-    (test-equal '%a (copy-operand d))
-    (test-equal 32 (int-size (copy-type d)))))
+    (test-equal '%a (copy-operand d))))
 
 (test-group "be:copy-core-integration"
-  (let* ((op-sexp '(%res = (be:copy %src : (int 32))))
+  (let* ((op-sexp '(%res = (be:copy %src)))
          (op (read-operation op-sexp #f)))
     (test-assert (operation? op))
     (test-equal 'be:copy (operation-op-type op))
     (test-assert (copy? (operation-op op)))
     (test-equal '%src (copy-operand (operation-op op)))
-    (test-equal 32 (int-size (copy-type (operation-op op))))
     (test-equal op-sexp (operation-serialize op))))
 
 (test-group "be:arithmetic-serialization"
-  (let* ((i32 (make-int 32))
-         (a (make-add i32 '%d '%e))
+  (let* ((a (make-add '%d '%e))
          (s (add-serialize a))
          (d (add-deserialize s)))
-    (test-equal '(be:add %d %e : (int 32)) s)
+    (test-equal '(be:add %d %e) s)
     (test-assert (add? d))
     (test-equal '%d (add-lhs d))
-    (test-equal '%e (add-rhs d))
-    (test-equal 32 (int-size (add-type d))))
+    (test-equal '%e (add-rhs d)))
 
-  (let* ((i64 (make-int 64))
-         (sb (make-sub i64 '%a '%b))
+  (let* ((sb (make-sub '%a '%b))
          (s (sub-serialize sb))
          (d (sub-deserialize s)))
-    (test-equal '(be:sub %a %b : (int 64)) s)
+    (test-equal '(be:sub %a %b) s)
     (test-assert (sub? d))
     (test-equal '%a (sub-lhs d))
-    (test-equal '%b (sub-rhs d))
-    (test-equal 64 (int-size (sub-type d))))
+    (test-equal '%b (sub-rhs d)))
 
-  (let* ((i32 (make-int 32))
-         (m (make-mul i32 '%x '%y))
-         (id (make-idiv i32 '%x '%y))
-         (ud (make-udiv i32 '%x '%y))
-         (ls (make-lshift i32 '%x '%amt))
-         (rs (make-rshift i32 '%x '%amt))
-         (ir (make-irem i32 '%x '%y))
-         (ur (make-urem i32 '%x '%y)))
-    (test-equal '(be:mul %x %y : (int 32)) (mul-serialize m))
-    (test-equal '(be:idiv %x %y : (int 32)) (idiv-serialize id))
-    (test-equal '(be:udiv %x %y : (int 32)) (udiv-serialize ud))
-    (test-equal '(be:lshift %x %amt : (int 32)) (lshift-serialize ls))
-    (test-equal '(be:rshift %x %amt : (int 32)) (rshift-serialize rs))
-    (test-equal '(be:irem %x %y : (int 32)) (irem-serialize ir))
-    (test-equal '(be:urem %x %y : (int 32)) (urem-serialize ur))
+  (let* ((m (make-mul '%x '%y))
+         (id (make-idiv '%x '%y))
+         (ud (make-udiv '%x '%y))
+         (ls (make-lshift '%x '%amt))
+         (rs (make-rshift '%x '%amt))
+         (ir (make-irem '%x '%y))
+         (ur (make-urem '%x '%y)))
+    (test-equal '(be:mul %x %y) (mul-serialize m))
+    (test-equal '(be:idiv %x %y) (idiv-serialize id))
+    (test-equal '(be:udiv %x %y) (udiv-serialize ud))
+    (test-equal '(be:lshift %x %amt) (lshift-serialize ls))
+    (test-equal '(be:rshift %x %amt) (rshift-serialize rs))
+    (test-equal '(be:irem %x %y) (irem-serialize ir))
+    (test-equal '(be:urem %x %y) (urem-serialize ur))
 
     (test-assert (mul? (mul-deserialize (mul-serialize m))))
     (test-assert (idiv? (idiv-deserialize (idiv-serialize id))))
@@ -108,53 +98,47 @@
     (test-assert (urem? (urem-deserialize (urem-serialize ur))))))
 
 (test-group "be:extension-serialization"
-  (let* ((i64 (make-int 64))
-         (sx (make-sext i64 '%x))
-         (zx (make-zext i64 '%x))
+  (let* ((sx (make-sext '%x))
+         (zx (make-zext '%x))
          (s-sx (sext-serialize sx))
          (s-zx (zext-serialize zx))
          (d-sx (sext-deserialize s-sx))
          (d-zx (zext-deserialize s-zx)))
-    (test-equal '(be:sext %x : (int 64)) s-sx)
-    (test-equal '(be:zext %x : (int 64)) s-zx)
+    (test-equal '(be:sext %x) s-sx)
+    (test-equal '(be:zext %x) s-zx)
     (test-assert (sext? d-sx))
     (test-assert (zext? d-zx))
     (test-equal '%x (sext-operand d-sx))
-    (test-equal '%x (zext-operand d-zx))
-    (test-equal 64 (int-size (sext-type d-sx)))
-    (test-equal 64 (int-size (zext-type d-zx)))))
+    (test-equal '%x (zext-operand d-zx))))
 
 (test-group "be:load-serialization"
-  (let* ((i32 (make-int 32))
-         (l1 (make-load i32 '%ptr 8))
-         (l2 (make-load i32 '%ptr 0))
+  (let* ((l1 (make-load '%ptr 8))
+         (l2 (make-load '%ptr 0))
          (s1 (load-serialize l1))
          (s2 (load-serialize l2))
          (d1 (load-deserialize s1))
          (d2 (load-deserialize s2))
-         (d3 (load-deserialize '(be:load %ptr : (int 32)))))
-    (test-equal '(be:load %ptr 8 : (int 32)) s1)
-    (test-equal '(be:load %ptr : (int 32)) s2)
+         (d3 (load-deserialize '(be:load %ptr))))
+    (test-equal '(be:load %ptr 8) s1)
+    (test-equal '(be:load %ptr) s2)
     (test-assert (load? d1))
     (test-assert (load? d2))
     (test-assert (load? d3))
     (test-equal '%ptr (load-ptr d1))
     (test-equal 8 (load-offset d1))
     (test-equal 0 (load-offset d2))
-    (test-equal 0 (load-offset d3))
-    (test-equal 32 (int-size (load-type d1)))))
+    (test-equal 0 (load-offset d3))))
 
 (test-group "be:store-serialization"
-  (let* ((i64 (make-int 64))
-         (st1 (make-store i64 '%ptr '%val 16))
-         (st2 (make-store i64 '%ptr '%val 0))
+  (let* ((st1 (make-store '%ptr '%val 16))
+         (st2 (make-store '%ptr '%val 0))
          (s1 (store-serialize st1))
          (s2 (store-serialize st2))
          (d1 (store-deserialize s1))
          (d2 (store-deserialize s2))
-         (d3 (store-deserialize '(be:store %ptr %val : (int 64)))))
-    (test-equal '(be:store %ptr %val 16 : (int 64)) s1)
-    (test-equal '(be:store %ptr %val : (int 64)) s2)
+         (d3 (store-deserialize '(be:store %ptr %val))))
+    (test-equal '(be:store %ptr %val 16) s1)
+    (test-equal '(be:store %ptr %val) s2)
     (test-assert (store? d1))
     (test-assert (store? d2))
     (test-assert (store? d3))
@@ -162,12 +146,11 @@
     (test-equal '%val (store-val d1))
     (test-equal 16 (store-offset d1))
     (test-equal 0 (store-offset d2))
-    (test-equal 0 (store-offset d3))
-    (test-equal 64 (int-size (store-type d1)))))
+    (test-equal 0 (store-offset d3))))
 
 (test-group "be:load-store-core-integration"
-  (let* ((op-load-sexp '(%res = (be:load %ptr 8 : (int 32))))
-         (op-store-sexp '((be:store %ptr %val 4 : (int 32))))
+  (let* ((op-load-sexp '(%res = (be:load %ptr 8)))
+         (op-store-sexp '((be:store %ptr %val 4)))
          (op-load (read-operation op-load-sexp #f))
          (op-store (read-operation op-store-sexp #f)))
     (test-assert (operation? op-load))
@@ -215,54 +198,33 @@
 
 (test-group "be:register-operand-assertions"
   (reset-error-log!)
-  (let ((i32 (make-int 32))
-        (p (make-ptr)))
-    ;; Valid register operands: no error logged
-    (add-serialize (make-add i32 '%a '%b))
-    (test-equal 0 (error-count))
+  ;; Valid register operands: no error logged
+  (add-serialize (make-add '%a '%b))
+  (test-equal 0 (error-count))
 
-    ;; Valid pointer type in add and sub: no error logged
-    (add-serialize (make-add p '%a '%b))
-    (sub-serialize (make-sub p '%a '%b))
-    (test-equal 0 (error-count))
-    (test-assert (add? (add-deserialize '(be:add %a %b : ptr))))
-    (test-assert (sub? (sub-deserialize '(be:sub %a %b : ptr))))
+  ;; Invalid (non-register) operand in add: logs error via okm-assert
+  (add-serialize (make-add '%a 123))
+  (test-equal 1 (error-count))
 
-    ;; Invalid (non-register) operand in add: logs error via okm-assert
-    (add-serialize (make-add i32 '%a 123))
-    (test-equal 1 (error-count))
+  ;; Block label (^bb1) is excluded, but non-register block arg (123) logs error
+  (jmp-serialize (make-jmp '(^bb1 123)))
+  (test-equal 2 (error-count))
 
-    ;; Non-int / non-ptr type (e.g. invalid type object) in add logs error
-    (add-serialize (make-add "invalid-type" '%a '%b))
-    (test-equal 3 (error-count))
-
-    ;; Invalid (non-int) type in mul: logs error via okm-assert
-    (mul-serialize (make-mul p '%a '%b))
-    (test-equal 4 (error-count))
-
-    ;; Block label (^bb1) is excluded, but non-register block arg (123) logs error
-    (jmp-serialize (make-jmp '(^bb1 123)))
-    (test-equal 5 (error-count))
-
-    (reset-error-log!)))
+  (reset-error-log!))
 
 (test-group "be:deserializer-assertions"
   (reset-error-log!)
   ;; Deserializing invalid non-register operand in add logs error and returns #f
-  (test-assert (not (add-deserialize '(be:add %a 123 : (int 32)))))
+  (test-assert (not (add-deserialize '(be:add %a 123))))
   (test-equal 1 (error-count))
-
-  ;; Deserializing invalid type in mul logs error and returns #f
-  (test-assert (not (mul-deserialize '(be:mul %a %b : ptr))))
-  (test-equal 2 (error-count))
 
   ;; Deserializing non-register in syscall logs error and returns #f
   (test-assert (not (syscall-deserialize '(be:syscall 1 %fd 123))))
-  (test-equal 3 (error-count))
+  (test-equal 2 (error-count))
 
   ;; Deserializing non-symbol function name logs error and returns #f
   (test-assert (not (func-deserialize '(be:func invalid_name ((%a : (int 32))) -> (int 32) (region (block ^bb0))))))
-  (test-equal 4 (error-count))
+  (test-equal 3 (error-count))
 
   (reset-error-log!))
 
