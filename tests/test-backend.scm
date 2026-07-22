@@ -74,28 +74,28 @@
     (test-equal 32 (int-size (add-type d))))
 
   (let* ((i64 (make-int 64))
-         (sb (make-sub i64 '%a 1))
+         (sb (make-sub i64 '%a '%b))
          (s (sub-serialize sb))
          (d (sub-deserialize s)))
-    (test-equal '(be:sub %a 1 : (int 64)) s)
+    (test-equal '(be:sub %a %b : (int 64)) s)
     (test-assert (sub? d))
     (test-equal '%a (sub-lhs d))
-    (test-equal 1 (sub-rhs d))
+    (test-equal '%b (sub-rhs d))
     (test-equal 64 (int-size (sub-type d))))
 
   (let* ((i32 (make-int 32))
          (m (make-mul i32 '%x '%y))
          (id (make-idiv i32 '%x '%y))
          (ud (make-udiv i32 '%x '%y))
-         (ls (make-lshift i32 '%x 2))
-         (rs (make-rshift i32 '%x 2))
+         (ls (make-lshift i32 '%x '%amt))
+         (rs (make-rshift i32 '%x '%amt))
          (ir (make-irem i32 '%x '%y))
          (ur (make-urem i32 '%x '%y)))
     (test-equal '(be:mul %x %y : (int 32)) (mul-serialize m))
     (test-equal '(be:idiv %x %y : (int 32)) (idiv-serialize id))
     (test-equal '(be:udiv %x %y : (int 32)) (udiv-serialize ud))
-    (test-equal '(be:lshift %x 2 : (int 32)) (lshift-serialize ls))
-    (test-equal '(be:rshift %x 2 : (int 32)) (rshift-serialize rs))
+    (test-equal '(be:lshift %x %amt : (int 32)) (lshift-serialize ls))
+    (test-equal '(be:rshift %x %amt : (int 32)) (rshift-serialize rs))
     (test-equal '(be:irem %x %y : (int 32)) (irem-serialize ir))
     (test-equal '(be:urem %x %y : (int 32)) (urem-serialize ur))
 
@@ -179,6 +179,60 @@
     (test-equal 'be:store (operation-op-type op-store))
     (test-assert (store? (operation-op op-store)))
     (test-equal op-store-sexp (operation-serialize op-store))))
+
+(test-group "be:jmp-serialization"
+  (let* ((j (make-jmp '(^bb1 %x %y)))
+         (s (jmp-serialize j))
+         (d (jmp-deserialize s)))
+    (test-equal '(be:jmp (^bb1 %x %y)) s)
+    (test-assert (jmp? d))
+    (test-equal '(^bb1 %x %y) (jmp-target d))))
+
+(test-group "be:br-cond-serialization"
+  (let* ((b (make-br-cond '%cond '(^bb1 %x) '(^bb2 %y)))
+         (s (br-cond-serialize b))
+         (d (br-cond-deserialize s)))
+    (test-equal '(be:br-cond %cond (^bb1 %x) (^bb2 %y)) s)
+    (test-assert (br-cond? d))
+    (test-equal '%cond (br-cond-condition d))
+    (test-equal '(^bb1 %x) (br-cond-then-target d))
+    (test-equal '(^bb2 %y) (br-cond-else-target d))))
+
+(test-group "be:control-flow-core-integration"
+  (let* ((op-jmp-sexp '((be:jmp (^bb1 %a %b))))
+         (op-br-sexp '((be:br-cond %c (^bb1 %a) (^bb2))))
+         (op-jmp (read-operation op-jmp-sexp #f))
+         (op-br (read-operation op-br-sexp #f)))
+    (test-assert (operation? op-jmp))
+    (test-equal 'be:jmp (operation-op-type op-jmp))
+    (test-assert (jmp? (operation-op op-jmp)))
+    (test-equal op-jmp-sexp (operation-serialize op-jmp))
+
+    (test-assert (operation? op-br))
+    (test-equal 'be:br-cond (operation-op-type op-br))
+    (test-assert (br-cond? (operation-op op-br)))
+    (test-equal op-br-sexp (operation-serialize op-br))))
+
+(test-group "be:register-operand-assertions"
+  (reset-error-log!)
+  (let ((i32 (make-int 32)))
+    ;; Valid register operands: no error logged
+    (add-serialize (make-add i32 '%a '%b))
+    (test-equal 0 (error-count))
+
+    ;; Invalid (non-register) operand in add: logs error via okm-assert
+    (add-serialize (make-add i32 '%a 123))
+    (test-equal 1 (error-count))
+
+    ;; Constant op value is excluded (allows numbers): no error
+    (constant-serialize (make-constant i32 100))
+    (test-equal 1 (error-count))
+
+    ;; Block label (^bb1) is excluded, but non-register block arg (123) logs error
+    (jmp-serialize (make-jmp '(^bb1 123)))
+    (test-equal 2 (error-count))
+
+    (reset-error-log!)))
 
 (test-group "define-dialect-op-custom-names"
   (let* ((c (make-be-test-copy 123))

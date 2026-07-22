@@ -57,7 +57,15 @@
 
           store make-store store?
           store-type store-ptr store-val store-offset
-          store-serialize store-deserialize)
+          store-serialize store-deserialize
+
+          jmp make-jmp jmp?
+          jmp-target
+          jmp-serialize jmp-deserialize
+
+          br-cond make-br-cond br-cond?
+          br-cond-condition br-cond-then-target br-cond-else-target
+          br-cond-serialize br-cond-deserialize)
   (import (rnrs (6))
           (ufo-match)
           (ockham core))
@@ -86,6 +94,7 @@
       (immutable operand copy-operand))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (copy-operand op)))
         `(_ ,(copy-operand op) : ,(int-serialize (copy-type op)))))
     (deserializer
       (lambda (lst)
@@ -100,6 +109,8 @@
       (immutable rhs add-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (add-lhs op)))
+        (okm-assert (valid-register-name? (add-rhs op)))
         `(_ ,(add-lhs op) ,(add-rhs op) : ,(int-serialize (add-type op)))))
     (deserializer
       (lambda (lst)
@@ -114,6 +125,8 @@
       (immutable rhs sub-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (sub-lhs op)))
+        (okm-assert (valid-register-name? (sub-rhs op)))
         `(_ ,(sub-lhs op) ,(sub-rhs op) : ,(int-serialize (sub-type op)))))
     (deserializer
       (lambda (lst)
@@ -128,6 +141,8 @@
       (immutable rhs mul-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (mul-lhs op)))
+        (okm-assert (valid-register-name? (mul-rhs op)))
         `(_ ,(mul-lhs op) ,(mul-rhs op) : ,(int-serialize (mul-type op)))))
     (deserializer
       (lambda (lst)
@@ -142,6 +157,8 @@
       (immutable rhs idiv-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (idiv-lhs op)))
+        (okm-assert (valid-register-name? (idiv-rhs op)))
         `(_ ,(idiv-lhs op) ,(idiv-rhs op) : ,(int-serialize (idiv-type op)))))
     (deserializer
       (lambda (lst)
@@ -156,6 +173,8 @@
       (immutable rhs udiv-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (udiv-lhs op)))
+        (okm-assert (valid-register-name? (udiv-rhs op)))
         `(_ ,(udiv-lhs op) ,(udiv-rhs op) : ,(int-serialize (udiv-type op)))))
     (deserializer
       (lambda (lst)
@@ -170,6 +189,8 @@
       (immutable rhs lshift-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (lshift-lhs op)))
+        (okm-assert (valid-register-name? (lshift-rhs op)))
         `(_ ,(lshift-lhs op) ,(lshift-rhs op) : ,(int-serialize (lshift-type op)))))
     (deserializer
       (lambda (lst)
@@ -184,6 +205,8 @@
       (immutable rhs rshift-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (rshift-lhs op)))
+        (okm-assert (valid-register-name? (rshift-rhs op)))
         `(_ ,(rshift-lhs op) ,(rshift-rhs op) : ,(int-serialize (rshift-type op)))))
     (deserializer
       (lambda (lst)
@@ -198,6 +221,8 @@
       (immutable rhs irem-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (irem-lhs op)))
+        (okm-assert (valid-register-name? (irem-rhs op)))
         `(_ ,(irem-lhs op) ,(irem-rhs op) : ,(int-serialize (irem-type op)))))
     (deserializer
       (lambda (lst)
@@ -212,6 +237,8 @@
       (immutable rhs urem-rhs))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (urem-lhs op)))
+        (okm-assert (valid-register-name? (urem-rhs op)))
         `(_ ,(urem-lhs op) ,(urem-rhs op) : ,(int-serialize (urem-type op)))))
     (deserializer
       (lambda (lst)
@@ -225,6 +252,7 @@
       (immutable operand sext-operand))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (sext-operand op)))
         `(_ ,(sext-operand op) : ,(int-serialize (sext-type op)))))
     (deserializer
       (lambda (lst)
@@ -238,6 +266,7 @@
       (immutable operand zext-operand))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (zext-operand op)))
         `(_ ,(zext-operand op) : ,(int-serialize (zext-type op)))))
     (deserializer
       (lambda (lst)
@@ -252,6 +281,7 @@
       (immutable offset load-offset))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (load-ptr op)))
         (if (and (load-offset op) (not (zero? (load-offset op))))
             `(_ ,(load-ptr op) ,(load-offset op) : ,(int-serialize (load-type op)))
             `(_ ,(load-ptr op) : ,(int-serialize (load-type op))))))
@@ -270,6 +300,8 @@
       (immutable offset store-offset))
     (serializer
       (lambda (op)
+        (okm-assert (valid-register-name? (store-ptr op)))
+        (okm-assert (valid-register-name? (store-val op)))
         (if (and (store-offset op) (not (zero? (store-offset op))))
             `(_ ,(store-ptr op) ,(store-val op) ,(store-offset op) : ,(int-serialize (store-type op)))
             `(_ ,(store-ptr op) ,(store-val op) : ,(int-serialize (store-type op))))))
@@ -278,6 +310,43 @@
         (match lst
           ((_ ptr val offset ': ty) (make-store (int-deserialize ty) ptr val offset))
           ((_ ptr val ': ty) (make-store (int-deserialize ty) ptr val 0))
+          (_ #f)))))
+
+  (define-dialect-op (be jmp)
+    (fields
+      (immutable target jmp-target))
+    (serializer
+      (lambda (op)
+        (let ((tgt (jmp-target op)))
+          (when (and (pair? tgt) (pair? (cdr tgt)))
+            (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr tgt)))
+          `(_ ,tgt))))
+    (deserializer
+      (lambda (lst)
+        (match lst
+          ((_ target) (make-jmp target))
+          (_ #f)))))
+
+  (define-dialect-op (be br-cond)
+    (fields
+      (immutable condition br-cond-condition)
+      (immutable then-target br-cond-then-target)
+      (immutable else-target br-cond-else-target))
+    (serializer
+      (lambda (op)
+        (okm-assert (valid-register-name? (br-cond-condition op)))
+        (let ((then-t (br-cond-then-target op))
+              (else-t (br-cond-else-target op)))
+          (when (and (pair? then-t) (pair? (cdr then-t)))
+            (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr then-t)))
+          (when (and (pair? else-t) (pair? (cdr else-t)))
+            (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr else-t)))
+          `(_ ,(br-cond-condition op) ,then-t ,else-t))))
+    (deserializer
+      (lambda (lst)
+        (match lst
+          ((_ condition then-target else-target)
+           (make-br-cond condition then-target else-target))
           (_ #f)))))
 )
 

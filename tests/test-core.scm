@@ -196,5 +196,25 @@
          (reg (region-deserialize region-lst)))
     (test-equal region-lst (region-serialize reg))))
 
+(test-group "error-logging"
+  (reset-error-log!)
+  (test-equal 0 (error-count))
+  (test-equal '() (error-messages))
+
+  (log-error "Custom error message")
+  (test-equal 1 (error-count))
+  (test-equal '("Custom error message") (error-messages))
+
+  (okm-assert (= 10 10))
+  (test-equal 1 (error-count))
+
+  (okm-assert (= 10 20))
+  (test-equal 2 (error-count))
+  (test-equal '("Custom error message" "Error: (= 10 20)") (error-messages))
+
+  (reset-error-log!)
+  (test-equal 0 (error-count))
+  (test-equal '() (error-messages)))
+
 (test-end "ockham-core")
 

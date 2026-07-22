@@ -35,9 +35,37 @@
     abi-sp-register abi-fp-register
 
     target make-target target?
-    target-arch target-os target-abi target-constraints)
+    target-arch target-os target-abi target-constraints
+
+    log-error okm-assert error-count error-messages reset-error-log!)
   (import (rnrs (6))
           (ufo-match))
+
+  ;; Error Logging System
+  (define *error-count* 0)
+  (define *error-messages* '())
+
+  (define (log-error msg)
+    (set! *error-count* (+ *error-count* 1))
+    (set! *error-messages* (cons msg *error-messages*)))
+
+  (define (error-count) *error-count*)
+  (define (error-messages) (reverse *error-messages*))
+  (define (reset-error-log!)
+    (set! *error-count* 0)
+    (set! *error-messages* '()))
+
+  (define-syntax okm-assert
+    (lambda (stx)
+      (syntax-case stx ()
+        ((_ expr)
+         (let* ((datum (syntax->datum #'expr))
+                (str (call-with-string-output-port
+                       (lambda (p)
+                         (display "Error: " p)
+                         (write datum p)))))
+           #`(unless expr
+               (log-error #,str)))))))
 
   ;; Operation
   (define *op-types* '())
@@ -270,10 +298,10 @@
                   (transform-deser-clause
                     (lambda (clause-stx)
                       (syntax-case clause-stx ()
-                        (((_ . pat-rest) body ...)
+                        (((head . pat-rest) body ...)
+                         (eq? (syntax->datum #'head) '_)
                          #`(((quote op-sym) . pat-rest) body ...))
-                        ((pat body ...)
-                         #`(pat body ...)))))
+                        (other #'other))))
                   (transform-deser
                     (lambda (stx-in)
                       (syntax-case stx-in (match)
