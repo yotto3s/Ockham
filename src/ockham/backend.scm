@@ -71,6 +71,14 @@
           syscall-id syscall-args
           syscall-serialize syscall-deserialize
 
+          call make-call call?
+          call-callee call-args
+          call-serialize call-deserialize
+
+          ret make-ret ret?
+          ret-args
+          ret-serialize ret-deserialize
+
           func make-func func?
           func-name func-args func-return-types func-body
           func-serialize func-deserialize)
@@ -298,6 +306,51 @@
               (for-all valid-register-name? args))
              (make-syscall id args)))
           (_ #f)))))
+
+  (define-dialect-op (be call)
+    (fields
+      (immutable callee call-callee)
+      (immutable args call-args))
+    (serializer
+      (lambda (op)
+        (let ((callee (call-callee op))
+              (args (call-args op)))
+          (okm-assert (or (valid-register-name? callee) (okm-valid-symbol-name? callee)))
+          (okm-assert (and (list? args) (for-all valid-register-name? args)))
+          `(_ ,callee . ,args))))
+    (deserializer
+      (lambda (lst)
+        (match lst
+          ((_ callee . args)
+           (okm-assert-guard
+             ((or (valid-register-name? callee) (okm-valid-symbol-name? callee))
+              (list? args)
+              (for-all valid-register-name? args))
+             (make-call callee args)))
+          (_ #f)))))
+
+  (define-dialect-op (be (ret %make-ret ret?))
+    (fields
+      (immutable args ret-args))
+    (serializer
+      (lambda (op)
+        (let ((args (ret-args op)))
+          (okm-assert (and (list? args) (for-all valid-register-name? args)))
+          `(_ . ,args))))
+    (deserializer
+      (lambda (lst)
+        (match lst
+          ((_ . args)
+           (okm-assert-guard
+             ((list? args)
+              (for-all valid-register-name? args))
+             (%make-ret args)))
+          (_ #f)))))
+
+  (define make-ret
+    (case-lambda
+      (() (%make-ret '()))
+      ((args) (%make-ret args))))
 
   (define (func-build-sexp op)
     (okm-assert (okm-valid-symbol-name? (func-name op)))

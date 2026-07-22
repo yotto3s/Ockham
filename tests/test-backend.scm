@@ -265,6 +265,54 @@
     (test-equal '(%fd %buf %count) (syscall-args (operation-op op)))
     (test-equal op-sys-sexp (operation-serialize op))))
 
+(test-group "be:call-serialization"
+  (let* ((c1 (make-call '\x40;fib '(%a)))
+         (s1 (call-serialize c1))
+         (d1 (call-deserialize s1))
+         (c2 (make-call '%fn_ptr '(%x %y)))
+         (s2 (call-serialize c2))
+         (d2 (call-deserialize s2)))
+    (test-equal '(be:call \x40;fib %a) s1)
+    (test-equal '(be:call %fn_ptr %x %y) s2)
+    (test-assert (call? d1))
+    (test-equal '\x40;fib (call-callee d1))
+    (test-equal '(%a) (call-args d1))
+    (test-assert (call? d2))
+    (test-equal '%fn_ptr (call-callee d2))
+    (test-equal '(%x %y) (call-args d2))))
+
+(test-group "be:call-core-integration"
+  (let* ((op-call-sexp '(%res = (be:call \x40;fib %a)))
+         (op (read-operation op-call-sexp #f)))
+    (test-assert (operation? op))
+    (test-equal 'be:call (operation-op-type op))
+    (test-assert (call? (operation-op op)))
+    (test-equal '\x40;fib (call-callee (operation-op op)))
+    (test-equal op-call-sexp (operation-serialize op))))
+
+(test-group "be:ret-serialization"
+  (let* ((r1 (make-ret '(%r1 %r2)))
+         (s1 (ret-serialize r1))
+         (d1 (ret-deserialize s1))
+         (r0 (make-ret))
+         (s0 (ret-serialize r0))
+         (d0 (ret-deserialize s0)))
+    (test-equal '(be:ret %r1 %r2) s1)
+    (test-equal '(be:ret) s0)
+    (test-assert (ret? d1))
+    (test-equal '(%r1 %r2) (ret-args d1))
+    (test-assert (ret? d0))
+    (test-equal '() (ret-args d0))))
+
+(test-group "be:ret-core-integration"
+  (let* ((op-ret-sexp '((be:ret %r1)))
+         (op (read-operation op-ret-sexp #f)))
+    (test-assert (operation? op))
+    (test-equal 'be:ret (operation-op-type op))
+    (test-assert (ret? (operation-op op)))
+    (test-equal '(%r1) (ret-args (operation-op op)))
+    (test-equal op-ret-sexp (operation-serialize op))))
+
 (test-group "be:func-serialization"
   (let* ((i32 (make-int 32))
          (i64 (make-int 64))
