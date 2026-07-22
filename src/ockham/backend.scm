@@ -49,7 +49,15 @@
 
           zext make-zext zext?
           zext-type zext-operand
-          zext-serialize zext-deserialize)
+          zext-serialize zext-deserialize
+
+          load make-load load?
+          load-type load-ptr load-offset
+          load-serialize load-deserialize
+
+          store make-store store?
+          store-type store-ptr store-val store-offset
+          store-serialize store-deserialize)
   (import (rnrs (6))
           (ufo-match)
           (ockham core))
@@ -235,6 +243,41 @@
       (lambda (lst)
         (match lst
           ((_ operand ': ty) (make-zext (int-deserialize ty) operand))
+          (_ #f)))))
+
+  (define-dialect-op (be load)
+    (fields
+      (immutable type load-type)
+      (immutable ptr load-ptr)
+      (immutable offset load-offset))
+    (serializer
+      (lambda (op)
+        (if (and (load-offset op) (not (zero? (load-offset op))))
+            `(_ ,(load-ptr op) ,(load-offset op) : ,(int-serialize (load-type op)))
+            `(_ ,(load-ptr op) : ,(int-serialize (load-type op))))))
+    (deserializer
+      (lambda (lst)
+        (match lst
+          ((_ ptr offset ': ty) (make-load (int-deserialize ty) ptr offset))
+          ((_ ptr ': ty) (make-load (int-deserialize ty) ptr 0))
+          (_ #f)))))
+
+  (define-dialect-op (be store)
+    (fields
+      (immutable type store-type)
+      (immutable ptr store-ptr)
+      (immutable val store-val)
+      (immutable offset store-offset))
+    (serializer
+      (lambda (op)
+        (if (and (store-offset op) (not (zero? (store-offset op))))
+            `(_ ,(store-ptr op) ,(store-val op) ,(store-offset op) : ,(int-serialize (store-type op)))
+            `(_ ,(store-ptr op) ,(store-val op) : ,(int-serialize (store-type op))))))
+    (deserializer
+      (lambda (lst)
+        (match lst
+          ((_ ptr val offset ': ty) (make-store (int-deserialize ty) ptr val offset))
+          ((_ ptr val ': ty) (make-store (int-deserialize ty) ptr val 0))
           (_ #f)))))
 )
 

@@ -124,6 +124,62 @@
     (test-equal 64 (int-size (sext-type d-sx)))
     (test-equal 64 (int-size (zext-type d-zx)))))
 
+(test-group "be:load-serialization"
+  (let* ((i32 (make-int 32))
+         (l1 (make-load i32 '%ptr 8))
+         (l2 (make-load i32 '%ptr 0))
+         (s1 (load-serialize l1))
+         (s2 (load-serialize l2))
+         (d1 (load-deserialize s1))
+         (d2 (load-deserialize s2))
+         (d3 (load-deserialize '(be:load %ptr : (int 32)))))
+    (test-equal '(be:load %ptr 8 : (int 32)) s1)
+    (test-equal '(be:load %ptr : (int 32)) s2)
+    (test-assert (load? d1))
+    (test-assert (load? d2))
+    (test-assert (load? d3))
+    (test-equal '%ptr (load-ptr d1))
+    (test-equal 8 (load-offset d1))
+    (test-equal 0 (load-offset d2))
+    (test-equal 0 (load-offset d3))
+    (test-equal 32 (int-size (load-type d1)))))
+
+(test-group "be:store-serialization"
+  (let* ((i64 (make-int 64))
+         (st1 (make-store i64 '%ptr '%val 16))
+         (st2 (make-store i64 '%ptr '%val 0))
+         (s1 (store-serialize st1))
+         (s2 (store-serialize st2))
+         (d1 (store-deserialize s1))
+         (d2 (store-deserialize s2))
+         (d3 (store-deserialize '(be:store %ptr %val : (int 64)))))
+    (test-equal '(be:store %ptr %val 16 : (int 64)) s1)
+    (test-equal '(be:store %ptr %val : (int 64)) s2)
+    (test-assert (store? d1))
+    (test-assert (store? d2))
+    (test-assert (store? d3))
+    (test-equal '%ptr (store-ptr d1))
+    (test-equal '%val (store-val d1))
+    (test-equal 16 (store-offset d1))
+    (test-equal 0 (store-offset d2))
+    (test-equal 0 (store-offset d3))
+    (test-equal 64 (int-size (store-type d1)))))
+
+(test-group "be:load-store-core-integration"
+  (let* ((op-load-sexp '(%res = (be:load %ptr 8 : (int 32))))
+         (op-store-sexp '((be:store %ptr %val 4 : (int 32))))
+         (op-load (read-operation op-load-sexp #f))
+         (op-store (read-operation op-store-sexp #f)))
+    (test-assert (operation? op-load))
+    (test-equal 'be:load (operation-op-type op-load))
+    (test-assert (load? (operation-op op-load)))
+    (test-equal op-load-sexp (operation-serialize op-load))
+
+    (test-assert (operation? op-store))
+    (test-equal 'be:store (operation-op-type op-store))
+    (test-assert (store? (operation-op op-store)))
+    (test-equal op-store-sexp (operation-serialize op-store))))
+
 (test-group "define-dialect-op-custom-names"
   (let* ((c (make-be-test-copy 123))
          (s (serialize-op 'be:test-copy c))
@@ -134,4 +190,5 @@
     (test-equal 123 (test-copy-value d))))
 
 (test-end "ockham-backend")
+
 
