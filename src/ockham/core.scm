@@ -1,6 +1,7 @@
 (library (ockham core)
   (export
     register-op unregister-op serialize-op deserialize-op
+    define-dialect-op
 
     int make-int int?
     int-size int-serialize int-deserialize
@@ -208,4 +209,97 @@
       (immutable os target-os)
       (immutable abi target-abi)
       (immutable constraints target-constraints)))
+
+  ;; Macro for defining dialect operators
+  (define-syntax define-dialect-op
+    (lambda (stx)
+      (define (symbolic-append k . args)
+        (datum->syntax k
+          (string->symbol
+            (apply string-append
+                   (map (lambda (x)
+                          (cond
+                            ((symbol? x) (symbol->string x))
+                            ((string? x) x)
+                            (else (symbol->string (syntax->datum x)))))
+                        args)))))
+
+      (define (parse-op-spec op-spec-stx)
+        (syntax-case op-spec-stx ()
+          ((op-name make-name pred-name)
+           (values #'op-name #'make-name #'pred-name))
+          ((op-name make-name)
+           (values #'op-name #'make-name (symbolic-append #'op-name #'op-name "?")))
+          (op-name
+           (values #'op-name
+                   (symbolic-append #'op-name "make-" #'op-name)
+                   (symbolic-append #'op-name #'op-name "?")))))
+
+      (syntax-case stx (fields serializer deserializer)
+        ((_ (dialect op-spec)
+            (fields field-spec ...)
+            (serializer ser-expr)
+            (deserializer deser-expr))
+         (let-values (((op-name make-name pred-name) (parse-op-spec #'op-spec)))
+           (let* ((d-sym (syntax->datum #'dialect))
+                  (op-s (syntax->datum op-name))
+                  (full-sym (string->symbol (string-append (symbol->string d-sym) ":" (symbol->string op-s)))))
+             (with-syntax
+               ((op-name op-name)
+                (make-name make-name)
+                (pred-name pred-name)
+                (op-sym (datum->syntax op-name full-sym))
+                (ser-name (symbolic-append op-name op-name "-serialize"))
+                (deser-name (symbolic-append op-name op-name "-deserialize")))
+               (letrec
+                 ((transform-ser
+                    (lambda (stx-in)
+                      (syntax-case stx-in (quasiquote list quote)
+                        ((quasiquote (_ . rest))
+                         #`(quasiquote (op-sym . rest)))
+                        ((list (quote _) . rest)
+                         #`(list (quote op-sym) . rest))
+                        ((list _ . rest)
+                         #`(list (quote op-sym) . rest))
+                        ((head . tail)
+                         #`(#,(transform-ser #'head) . #,(transform-ser #'tail)))
+                        (other #'other))))
+                  (transform-deser-clause
+                    (lambda (clause-stx)
+                      (syntax-case clause-stx ()
+                        (((_ . pat-rest) body ...)
+                         #`(((quote op-sym) . pat-rest) body ...))
+                        ((pat body ...)
+                         #`(pat body ...)))))
+                  (transform-deser
+                    (lambda (stx-in)
+                      (syntax-case stx-in (match)
+                        ((match lst clause ...)
+                         (with-syntax (((tc ...) (map transform-deser-clause #'(clause ...))))
+                           #`(match lst tc ...)))
+                        ((head . tail)
+                         #`(#,(transform-deser #'head) . #,(transform-deser #'tail)))
+                        (other #'other)))))
+                 (with-syntax
+                   ((transformed-ser (transform-ser #'ser-expr))
+                    (transformed-deser (transform-deser #'deser-expr)))
+                   (with-syntax
+                     ((ser-def
+                        (if (and (identifier? #'ser-expr)
+                                 (eq? (syntax->datum #'ser-expr) (syntax->datum #'ser-name)))
+                            #'(begin)
+                            #'(define ser-name transformed-ser)))
+                      (deser-def
+                        (if (and (identifier? #'deser-expr)
+                                 (eq? (syntax->datum #'deser-expr) (syntax->datum #'deser-name)))
+                            #'(begin)
+                            #'(define deser-name transformed-deser)))
+                      (actual-ser-proc (if (identifier? #'ser-expr) #'ser-expr #'ser-name))
+                      (actual-deser-proc (if (identifier? #'deser-expr) #'deser-expr #'deser-name)))
+                     #'(begin
+                         (define-record-type (op-name make-name pred-name)
+                           (fields field-spec ...))
+                         ser-def
+                         deser-def
+                         (register-op 'op-sym actual-ser-proc actual-deser-proc))))))))))))
 )
