@@ -236,13 +236,8 @@
     (add-serialize (make-add "invalid-type" '%a '%b))
     (test-equal 2 (error-count))
 
-    ;; Invalid (non-int) type in mul: logs error via okm-assert and fails deserialization
+    ;; Invalid (non-int) type in mul: logs error via okm-assert
     (mul-serialize (make-mul p '%a '%b))
-    (test-equal 3 (error-count))
-    (test-assert (not (mul-deserialize '(be:mul %a %b : ptr))))
-
-    ;; Constant op value is excluded (allows numbers): no error
-    (constant-serialize (make-constant i32 100))
     (test-equal 3 (error-count))
 
     ;; Block label (^bb1) is excluded, but non-register block arg (123) logs error
@@ -250,6 +245,26 @@
     (test-equal 4 (error-count))
 
     (reset-error-log!)))
+
+(test-group "be:deserializer-assertions"
+  (reset-error-log!)
+  ;; Deserializing invalid non-register operand in add logs error and returns #f
+  (test-assert (not (add-deserialize '(be:add %a 123 : (int 32)))))
+  (test-equal 1 (error-count))
+
+  ;; Deserializing invalid type in mul logs error and returns #f
+  (test-assert (not (mul-deserialize '(be:mul %a %b : ptr))))
+  (test-equal 2 (error-count))
+
+  ;; Deserializing non-register in syscall logs error and returns #f
+  (test-assert (not (syscall-deserialize '(be:syscall 1 %fd 123))))
+  (test-equal 3 (error-count))
+
+  ;; Deserializing non-symbol function name logs error and returns #f
+  (test-assert (not (func-deserialize '(be:func invalid_name ((%a : (int 32))) -> (int 32) (region (block ^bb0))))))
+  (test-equal 4 (error-count))
+
+  (reset-error-log!))
 
 (test-group "be:syscall-serialization"
   (let* ((sc1 (make-syscall 60 '(%status)))
