@@ -235,11 +235,14 @@
                    (symbolic-append #'op-name "make-" #'op-name)
                    (symbolic-append #'op-name #'op-name "?")))))
 
-      (syntax-case stx (fields serializer deserializer)
+      (syntax-case stx ()
         ((_ (dialect op-spec)
-            (fields field-spec ...)
-            (serializer ser-expr)
-            (deserializer deser-expr))
+            (kw-f field-spec ...)
+            (kw-s ser-expr)
+            (kw-d deser-expr))
+         (and (eq? (syntax->datum #'kw-f) 'fields)
+              (eq? (syntax->datum #'kw-s) 'serializer)
+              (eq? (syntax->datum #'kw-d) 'deserializer))
          (let-values (((op-name make-name pred-name) (parse-op-spec #'op-spec)))
            (let* ((d-sym (syntax->datum #'dialect))
                   (op-s (syntax->datum op-name))
@@ -283,23 +286,24 @@
                  (with-syntax
                    ((transformed-ser (transform-ser #'ser-expr))
                     (transformed-deser (transform-deser #'deser-expr)))
-                   (with-syntax
-                     ((ser-def
-                        (if (and (identifier? #'ser-expr)
-                                 (eq? (syntax->datum #'ser-expr) (syntax->datum #'ser-name)))
-                            #'(begin)
-                            #'(define ser-name transformed-ser)))
-                      (deser-def
-                        (if (and (identifier? #'deser-expr)
-                                 (eq? (syntax->datum #'deser-expr) (syntax->datum #'deser-name)))
-                            #'(begin)
-                            #'(define deser-name transformed-deser)))
-                      (actual-ser-proc (if (identifier? #'ser-expr) #'ser-expr #'ser-name))
-                      (actual-deser-proc (if (identifier? #'deser-expr) #'deser-expr #'deser-name)))
-                     #'(begin
-                         (define-record-type (op-name make-name pred-name)
-                           (fields field-spec ...))
-                         ser-def
-                         deser-def
-                         (register-op 'op-sym actual-ser-proc actual-deser-proc))))))))))))
+                (with-syntax
+                  ((ser-def
+                     (if (and (identifier? #'ser-expr)
+                              (eq? (syntax->datum #'ser-expr) (syntax->datum #'ser-name)))
+                         #'(begin)
+                         #'(define ser-name transformed-ser)))
+                   (deser-def
+                     (if (and (identifier? #'deser-expr)
+                              (eq? (syntax->datum #'deser-expr) (syntax->datum #'deser-name)))
+                         #'(begin)
+                         #'(define deser-name transformed-deser)))
+                   (actual-ser-proc (if (identifier? #'ser-expr) #'ser-expr #'ser-name))
+                   (actual-deser-proc (if (identifier? #'deser-expr) #'deser-expr #'deser-name))
+                   (reg-dummy (symbolic-append #'op-name #'op-name "-reg-dummy")))
+                  #'(begin
+                      (define-record-type (op-name make-name pred-name)
+                        (fields field-spec ...))
+                      ser-def
+                      deser-def
+                      (define reg-dummy (register-op 'op-sym actual-ser-proc actual-deser-proc)))))))))))))
 )
