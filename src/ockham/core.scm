@@ -37,7 +37,8 @@
     target make-target target?
     target-arch target-os target-abi target-constraints
 
-    log-error okm-assert error-count error-messages reset-error-log!)
+    log-error okm-assert error-count error-messages reset-error-log!
+    core-type? register-core-type unregister-core-type serialize-type deserialize-type)
   (import (rnrs (6))
           (ufo-match))
 
@@ -111,6 +112,41 @@
     (if (eq? p 'ptr)
       (make-ptr)
       #f))
+
+  ;; Core Type Registry
+  (define *core-type-predicates* (list int? ptr?))
+  (define *core-type-deserializers* (list int-deserialize ptr-deserialize))
+  (define *core-type-serializers* (list (cons int? int-serialize) (cons ptr? ptr-serialize)))
+
+  (define (register-core-type pred serializer deserializer)
+    (set! *core-type-predicates* (cons pred *core-type-predicates*))
+    (set! *core-type-serializers* (cons (cons pred serializer) *core-type-serializers*))
+    (set! *core-type-deserializers* (cons deserializer *core-type-deserializers*)))
+
+  (define (unregister-core-type pred)
+    (set! *core-type-predicates* (remp (lambda (p) (eq? p pred)) *core-type-predicates*))
+    (set! *core-type-serializers* (remp (lambda (entry) (eq? (car entry) pred)) *core-type-serializers*))
+    (set! *core-type-deserializers* (remp (lambda (d) (eq? d pred)) *core-type-deserializers*)))
+
+  (define (core-type? obj)
+    (exists (lambda (pred) (pred obj)) *core-type-predicates*))
+
+  (define (serialize-type obj)
+    (let loop ((entries *core-type-serializers*))
+      (if (null? entries)
+          #f
+          (let ((pred (caar entries))
+                (ser (cdar entries)))
+            (if (pred obj)
+                (ser obj)
+                (loop (cdr entries)))))))
+
+  (define (deserialize-type sexp)
+    (let loop ((desers *core-type-deserializers*))
+      (if (null? desers)
+          #f
+          (or ((car desers) sexp)
+              (loop (cdr desers))))))
 
   ;; Register
   (define-record-type (register make-register register?)

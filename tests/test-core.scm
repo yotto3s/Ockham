@@ -216,5 +216,19 @@
   (test-equal 0 (error-count))
   (test-equal '() (error-messages)))
 
+(test-group "core-type-registry"
+  (test-assert (core-type? (make-int 32)))
+  (test-assert (core-type? (make-ptr)))
+  (test-assert (not (core-type? "not-a-type")))
+  (test-assert (not (core-type? 123)))
+
+  (test-equal '(int 32) (serialize-type (make-int 32)))
+  (test-equal 'ptr (serialize-type (make-ptr)))
+
+  (test-assert (int? (deserialize-type '(int 32))))
+  (test-equal 32 (int-size (deserialize-type '(int 32))))
+  (test-assert (ptr? (deserialize-type 'ptr)))
+  (test-assert (not (deserialize-type '(invalid-type)))))
+
 (test-end "ockham-core")
 

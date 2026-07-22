@@ -215,24 +215,123 @@
 
 (test-group "be:register-operand-assertions"
   (reset-error-log!)
-  (let ((i32 (make-int 32)))
+  (let ((i32 (make-int 32))
+        (p (make-ptr)))
     ;; Valid register operands: no error logged
     (add-serialize (make-add i32 '%a '%b))
     (test-equal 0 (error-count))
+
+    ;; Valid pointer type in add and sub: no error logged
+    (add-serialize (make-add p '%a '%b))
+    (sub-serialize (make-sub p '%a '%b))
+    (test-equal 0 (error-count))
+    (test-assert (add? (add-deserialize '(be:add %a %b : ptr))))
+    (test-assert (sub? (sub-deserialize '(be:sub %a %b : ptr))))
 
     ;; Invalid (non-register) operand in add: logs error via okm-assert
     (add-serialize (make-add i32 '%a 123))
     (test-equal 1 (error-count))
 
+    ;; Non-int / non-ptr type (e.g. invalid type object) in add logs error
+    (add-serialize (make-add "invalid-type" '%a '%b))
+    (test-equal 2 (error-count))
+
+    ;; Invalid (non-int) type in mul: logs error via okm-assert and fails deserialization
+    (mul-serialize (make-mul p '%a '%b))
+    (test-equal 3 (error-count))
+    (test-assert (not (mul-deserialize '(be:mul %a %b : ptr))))
+
     ;; Constant op value is excluded (allows numbers): no error
     (constant-serialize (make-constant i32 100))
-    (test-equal 1 (error-count))
+    (test-equal 3 (error-count))
 
     ;; Block label (^bb1) is excluded, but non-register block arg (123) logs error
     (jmp-serialize (make-jmp '(^bb1 123)))
-    (test-equal 2 (error-count))
+    (test-equal 4 (error-count))
 
     (reset-error-log!)))
+
+(test-group "be:syscall-serialization"
+  (let* ((sc1 (make-syscall 60 '(%status)))
+         (s1 (syscall-serialize sc1))
+         (d1 (syscall-deserialize s1))
+         (sc2 (make-syscall 1 '(%fd %buf %count)))
+         (s2 (syscall-serialize sc2))
+         (d2 (syscall-deserialize s2))
+         (sc0 (make-syscall 39 '()))
+         (s0 (syscall-serialize sc0))
+         (d0 (syscall-deserialize s0)))
+    (test-equal '(be:syscall 60 %status) s1)
+    (test-equal '(be:syscall 1 %fd %buf %count) s2)
+    (test-equal '(be:syscall 39) s0)
+    (test-assert (syscall? d1))
+    (test-assert (syscall? d2))
+    (test-assert (syscall? d0))
+    (test-equal 60 (syscall-id d1))
+    (test-equal '(%status) (syscall-args d1))
+    (test-equal 1 (syscall-id d2))
+    (test-equal '(%fd %buf %count) (syscall-args d2))
+    (test-equal 39 (syscall-id d0))
+    (test-equal '() (syscall-args d0)))
+
+  ;; Invalid deserialization (> 6 args or non-integer id)
+  (test-assert (not (syscall-deserialize '(be:syscall "not-an-id" %a))))
+  (test-assert (not (syscall-deserialize '(be:syscall 1 %r1 %r2 %r3 %r4 %r5 %r6 %r7)))))
+
+(test-group "be:syscall-core-integration"
+  (let* ((op-sys-sexp '((be:syscall 1 %fd %buf %count)))
+         (op (read-operation op-sys-sexp #f)))
+    (test-assert (operation? op))
+    (test-equal 'be:syscall (operation-op-type op))
+    (test-assert (syscall? (operation-op op)))
+    (test-equal 1 (syscall-id (operation-op op)))
+    (test-equal '(%fd %buf %count) (syscall-args (operation-op op)))
+    (test-equal op-sys-sexp (operation-serialize op))))
+
+(test-group "be:func-serialization"
+  (let* ((i32 (make-int 32))
+         (i64 (make-int 64))
+         (blk (make-block '^bb0 '() #f))
+         (reg (make-region (list blk) #f))
+         (f1 (make-func '\x40;fib (list (cons '%a i32)) (list i32) reg))
+         (s1 (func-serialize f1))
+         (d1 (func-deserialize s1))
+         (f2 (make-func '\x40;div_mod (list (cons '%a i64) (cons '%b i64)) (list i64 i64) reg))
+         (s2 (func-serialize f2))
+         (d2 (func-deserialize s2))
+         (d3 (func-deserialize '(be:func \x40;fib ((%a : (int 32))) -> (int 32) (region (block ^bb0)))))
+         (f4 (make-func '\x40;alloc (list (cons '%sz i64)) (list (make-ptr)) reg))
+         (s4 (func-serialize f4))
+         (d4 (func-deserialize s4)))
+    (test-equal '(be:func \x40;fib ((%a : (int 32))) -> ((int 32)) (region (block ^bb0))) s1)
+    (test-equal '(be:func \x40;div_mod ((%a : (int 64)) (%b : (int 64))) -> ((int 64) (int 64)) (region (block ^bb0))) s2)
+    (test-equal '(be:func \x40;alloc ((%sz : (int 64))) -> (ptr) (region (block ^bb0))) s4)
+
+    (test-assert (func? d1))
+    (test-equal '\x40;fib (func-name d1))
+    (test-equal '%a (car (car (func-args d1))))
+    (test-equal 32 (int-size (cdr (car (func-args d1)))))
+    (test-equal 32 (int-size (car (func-return-types d1))))
+
+    (test-assert (func? d2))
+    (test-equal 2 (length (func-args d2)))
+    (test-equal 2 (length (func-return-types d2)))
+
+    (test-assert (func? d3))
+    (test-equal 1 (length (func-return-types d3)))
+    (test-equal 32 (int-size (car (func-return-types d3))))
+
+    (test-assert (func? d4))
+    (test-assert (ptr? (car (func-return-types d4))))))
+
+(test-group "be:func-core-integration"
+  (let* ((op-func-sexp '((be:func \x40;fib ((%a : (int 32))) -> ((int 32)) (region (block ^bb0)))))
+         (op (read-operation op-func-sexp #f)))
+    (test-assert (operation? op))
+    (test-equal 'be:func (operation-op-type op))
+    (test-assert (func? (operation-op op)))
+    (test-equal '\x40;fib (func-name (operation-op op)))
+    (test-equal op-func-sexp (operation-serialize op))))
 
 (test-group "define-dialect-op-custom-names"
   (let* ((c (make-be-test-copy 123))
