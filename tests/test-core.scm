@@ -222,6 +222,27 @@
 
   (reset-error-log!)
   (test-equal 0 (error-count))
+  (test-equal '() (error-messages))
+
+  ;; okm-match: matching pattern returns body
+  (test-equal 32 (okm-match '(int 32) (('int sz) sz)))
+
+  ;; okm-match: no matching pattern returns #f
+  (test-equal #f (okm-match '(bad 32) (('int sz) sz)))
+
+  ;; okm-match: multiple clauses, first match wins
+  (test-equal 'int-case
+    (okm-match '(int 32)
+      (('int sz) 'int-case)
+      (('ptr) 'ptr-case)))
+
+  (test-equal 'ptr-case
+    (okm-match '(ptr)
+      (('int sz) 'int-case)
+      (('ptr) 'ptr-case)))
+
+  (reset-error-log!)
+  (test-equal 0 (error-count))
   (test-equal '() (error-messages)))
 
 (test-group "core-deserializer-assertions"

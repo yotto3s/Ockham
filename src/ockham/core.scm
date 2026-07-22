@@ -37,7 +37,7 @@
     target make-target target?
     target-arch target-os target-abi target-constraints
 
-    log-error okm-assert okm-assert-guard error-count error-messages reset-error-log!
+    log-error okm-assert okm-assert-guard okm-match error-count error-messages reset-error-log!
     core-type? register-core-type unregister-core-type serialize-type deserialize-type)
   (import (rnrs (6))
           (ufo-match))
@@ -77,6 +77,13 @@
              body
              #f)))))
 
+  (define-syntax okm-match
+    (syntax-rules ()
+      ((_ expr (pattern body ...) ...)
+       (match expr
+         (pattern body ...) ...
+         (_ #f)))))
+
   ;; Operation
   (define *op-types* '())
 
@@ -112,13 +119,12 @@
     `(int ,(int-size okm)))
 
   (define (int-deserialize lst)
-    (match lst
+    (okm-match lst
       (('int size)
        (okm-assert-guard
          ((integer? size)
           (> size 0))
-         (make-int size)))
-      (_ #f)))
+         (make-int size)))))
 
   ;; Pointer
   (define-record-type (ptr make-ptr ptr?))
@@ -127,9 +133,8 @@
     'ptr)
 
   (define (ptr-deserialize p)
-    (match p
-      ('ptr (make-ptr))
-      (_ #f)))
+    (okm-match p
+      ('ptr (make-ptr))))
 
   ;; Core Type Registry
   (define *core-type-predicates* (list int? ptr?))
@@ -203,7 +208,7 @@
     (case-lambda
       ((lst) (region-deserialize lst #f))
       ((lst parent)
-       (match lst
+       (okm-match lst
          (('region . blocks-sexp)
           (let ((region (make-region #f parent)))
             (let ((blocks (map (lambda (block) (block-deserialize block region)) blocks-sexp)))
@@ -211,8 +216,7 @@
                 ((for-all block? blocks))
                 (begin
                   (set-region-blocks! region blocks)
-                  region)))))
-         (_ #f)))))
+                  region)))))))))
 
 
   ;; Block
@@ -226,7 +230,7 @@
     (case-lambda
       ((lst) (block-deserialize lst #f))
       ((lst parent)
-       (match lst
+       (okm-match lst
          (('block name . ops-sexp)
           (let ((block (make-block name #f parent)))
             (let ((ops (map (lambda (op) (read-operation op block)) ops-sexp)))
@@ -234,8 +238,7 @@
                 ((for-all operation? ops))
                 (begin
                   (set-block-ops! block ops)
-                  block)))))
-         (_ #f)))))
+                  block)))))))))
 
   ;; Operation
   (define-record-type (operation make-operation operation?)
@@ -371,10 +374,13 @@
                         (other #'other))))
                   (transform-deser
                     (lambda (stx-in)
-                      (syntax-case stx-in (match)
+                      (syntax-case stx-in (match okm-match)
                         ((match lst clause ...)
                          (with-syntax (((tc ...) (map transform-deser-clause #'(clause ...))))
                            #`(match lst tc ...)))
+                        ((okm-match lst clause ...)
+                         (with-syntax (((tc ...) (map transform-deser-clause #'(clause ...))))
+                           #`(match lst tc ... (_ #f))))
                         ((head . tail)
                          #`(#,(transform-deser #'head) . #,(transform-deser #'tail)))
                         (other #'other)))))
