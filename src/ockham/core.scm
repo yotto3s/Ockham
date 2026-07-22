@@ -37,7 +37,7 @@
     target make-target target?
     target-arch target-os target-abi target-constraints
 
-    log-error okm-assert error-count error-messages reset-error-log!
+    log-error okm-assert okm-assert-guard error-count error-messages reset-error-log!
     core-type? register-core-type unregister-core-type serialize-type deserialize-type)
   (import (rnrs (6))
           (ufo-match))
@@ -67,6 +67,15 @@
                          (write datum p)))))
            #`(unless expr
                (log-error #,str)))))))
+
+  (define-syntax okm-assert-guard
+    (syntax-rules ()
+      ((_ (cond ...) body)
+       (begin
+         (okm-assert cond) ...
+         (if (and cond ...)
+             body
+             #f)))))
 
   ;; Operation
   (define *op-types* '())

@@ -213,6 +213,14 @@
   (test-equal '("Custom error message" "Error: (= 10 20)") (error-messages))
 
   (reset-error-log!)
+  (test-equal 'success (okm-assert-guard ((= 1 1) (= 2 2)) 'success))
+  (test-equal 0 (error-count))
+
+  (test-equal #f (okm-assert-guard ((= 1 1) (= 2 3)) 'success))
+  (test-equal 1 (error-count))
+  (test-equal '("Error: (= 2 3)") (error-messages))
+
+  (reset-error-log!)
   (test-equal 0 (error-count))
   (test-equal '() (error-messages)))
 

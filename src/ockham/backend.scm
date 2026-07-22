@@ -95,8 +95,7 @@
         (match lst
           ((_ value ': ty)
            (let ((t (deserialize-type ty)))
-             (okm-assert t)
-             (if t (make-constant t value) #f)))
+             (okm-assert-guard (t) (make-constant t value))))
           (_ #f)))))
 
   (define-dialect-op (be copy)
@@ -112,11 +111,10 @@
         (match lst
           ((_ operand ': ty)
            (let ((t (deserialize-type ty)))
-             (okm-assert t)
-             (okm-assert (valid-register-name? operand))
-             (if (and t (valid-register-name? operand))
-                 (make-copy t operand)
-                 #f)))
+             (okm-assert-guard
+               (t
+                (valid-register-name? operand))
+               (make-copy t operand))))
           (_ #f)))))
 
   (define (int-or-ptr? t) (or (int? t) (ptr? t)))
@@ -151,14 +149,11 @@
                      (match lst
                        ((_ lhs rhs ': ty)
                         (let ((t (deserialize-type ty)))
-                          (okm-assert (and t (type-pred t)))
-                          (okm-assert (valid-register-name? lhs))
-                          (okm-assert (valid-register-name? rhs))
-                          (if (and t (type-pred t)
-                                   (valid-register-name? lhs)
-                                   (valid-register-name? rhs))
-                              (make-op t lhs rhs)
-                              #f)))
+                          (okm-assert-guard
+                            ((and t (type-pred t))
+                             (valid-register-name? lhs)
+                             (valid-register-name? rhs))
+                            (make-op t lhs rhs))))
                        (_ #f)))))))))))
 
   (define-syntax define-binary-ops
@@ -192,11 +187,10 @@
                      (match lst
                        ((_ operand ': ty)
                         (let ((t (deserialize-type ty)))
-                          (okm-assert (and t (int? t)))
-                          (okm-assert (valid-register-name? operand))
-                          (if (and t (int? t) (valid-register-name? operand))
-                              (make-op t operand)
-                              #f)))
+                          (okm-assert-guard
+                            ((and t (int? t))
+                             (valid-register-name? operand))
+                            (make-op t operand))))
                        (_ #f)))))))))))
 
   (define-binary-ops
@@ -229,18 +223,16 @@
         (match lst
           ((_ ptr offset ': ty)
            (let ((t (deserialize-type ty)))
-             (okm-assert t)
-             (okm-assert (valid-register-name? ptr))
-             (if (and t (valid-register-name? ptr))
-                 (make-load t ptr offset)
-                 #f)))
+             (okm-assert-guard
+               (t
+                (valid-register-name? ptr))
+               (make-load t ptr offset))))
           ((_ ptr ': ty)
            (let ((t (deserialize-type ty)))
-             (okm-assert t)
-             (okm-assert (valid-register-name? ptr))
-             (if (and t (valid-register-name? ptr))
-                 (make-load t ptr 0)
-                 #f)))
+             (okm-assert-guard
+               (t
+                (valid-register-name? ptr))
+               (make-load t ptr 0))))
           (_ #f)))))
 
   (define-dialect-op (be store)
@@ -261,20 +253,18 @@
         (match lst
           ((_ ptr val offset ': ty)
            (let ((t (deserialize-type ty)))
-             (okm-assert t)
-             (okm-assert (valid-register-name? ptr))
-             (okm-assert (valid-register-name? val))
-             (if (and t (valid-register-name? ptr) (valid-register-name? val))
-                 (make-store t ptr val offset)
-                 #f)))
+             (okm-assert-guard
+               (t
+                (valid-register-name? ptr)
+                (valid-register-name? val))
+               (make-store t ptr val offset))))
           ((_ ptr val ': ty)
            (let ((t (deserialize-type ty)))
-             (okm-assert t)
-             (okm-assert (valid-register-name? ptr))
-             (okm-assert (valid-register-name? val))
-             (if (and t (valid-register-name? ptr) (valid-register-name? val))
-                 (make-store t ptr val 0)
-                 #f)))
+             (okm-assert-guard
+               (t
+                (valid-register-name? ptr)
+                (valid-register-name? val))
+               (make-store t ptr val 0))))
           (_ #f)))))
 
   (define-dialect-op (be jmp)
@@ -290,14 +280,11 @@
       (lambda (lst)
         (match lst
           ((_ target)
-           (okm-assert (pair? target))
-           (when (and (pair? target) (pair? (cdr target)))
-             (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr target)))
-           (if (and (pair? target)
-                    (or (null? (cdr target))
-                        (for-all valid-register-name? (cdr target))))
-               (make-jmp target)
-               #f))
+           (okm-assert-guard
+             ((pair? target)
+              (or (null? (cdr target))
+                  (for-all valid-register-name? (cdr target))))
+             (make-jmp target)))
           (_ #f)))))
 
   (define-dialect-op (be br-cond)
@@ -319,20 +306,13 @@
       (lambda (lst)
         (match lst
           ((_ condition then-target else-target)
-           (okm-assert (valid-register-name? condition))
-           (okm-assert (pair? then-target))
-           (okm-assert (pair? else-target))
-           (when (and (pair? then-target) (pair? (cdr then-target)))
-             (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr then-target)))
-           (when (and (pair? else-target) (pair? (cdr else-target)))
-             (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr else-target)))
-           (if (and (valid-register-name? condition)
-                    (pair? then-target)
-                    (pair? else-target)
-                    (or (null? (cdr then-target)) (for-all valid-register-name? (cdr then-target)))
-                    (or (null? (cdr else-target)) (for-all valid-register-name? (cdr else-target))))
-               (make-br-cond condition then-target else-target)
-               #f))
+           (okm-assert-guard
+             ((valid-register-name? condition)
+              (pair? then-target)
+              (pair? else-target)
+              (or (null? (cdr then-target)) (for-all valid-register-name? (cdr then-target)))
+              (or (null? (cdr else-target)) (for-all valid-register-name? (cdr else-target))))
+             (make-br-cond condition then-target else-target)))
           (_ #f)))))
 
   (define-dialect-op (be syscall)
@@ -350,16 +330,12 @@
       (lambda (lst)
         (match lst
           ((_ id . args)
-           (okm-assert (integer? id))
-           (okm-assert (and (list? args) (<= (length args) 6)))
-           (when (list? args)
-             (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) args))
-           (if (and (integer? id)
-                    (list? args)
-                    (<= (length args) 6)
-                    (for-all valid-register-name? args))
-               (make-syscall id args)
-               #f))
+           (okm-assert-guard
+             ((integer? id)
+              (list? args)
+              (<= (length args) 6)
+              (for-all valid-register-name? args))
+             (make-syscall id args)))
           (_ #f)))))
 
   (define (func-build-sexp op)
@@ -383,16 +359,14 @@
       (lambda (lst)
         (match lst
           ((_ name args-sexp '-> rets-sexp body-sexp)
-           (okm-assert (okm-valid-symbol-name? name))
            (let ((args (map (lambda (a)
                               (match a
                                 ((reg ': ty)
-                                 (okm-assert (valid-register-name? reg))
                                  (let ((t (deserialize-type ty)))
-                                   (okm-assert t)
-                                   (if (and (valid-register-name? reg) t)
-                                       (cons reg t)
-                                       #f)))
+                                   (okm-assert-guard
+                                     ((valid-register-name? reg)
+                                      t)
+                                     (cons reg t))))
                                 (_ (begin (okm-assert #f) #f))))
                             args-sexp))
                  (rets (let ((single-type (deserialize-type rets-sexp)))
@@ -405,14 +379,12 @@
                                        (begin (okm-assert #f) #f)))
                                  (begin (okm-assert #f) #f)))))
                  (body (region-deserialize body-sexp)))
-             (okm-assert rets)
-             (okm-assert body)
-             (if (and (okm-valid-symbol-name? name)
-                      (for-all pair? args)
-                      rets
-                      body)
-                 (make-func name args rets body)
-                 #f)))
+             (okm-assert-guard
+               ((okm-valid-symbol-name? name)
+                (for-all pair? args)
+                rets
+                body)
+               (make-func name args rets body))))
           (_ #f)))))
 )
 
