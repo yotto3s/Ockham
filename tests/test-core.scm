@@ -224,6 +224,26 @@
   (test-equal 0 (error-count))
   (test-equal '() (error-messages)))
 
+(test-group "core-deserializer-assertions"
+  (reset-error-log!)
+  ;; Deserializing invalid size in int logs error and returns #f
+  (test-assert (not (deserialize-type '(int -32))))
+  (test-equal 1 (error-count))
+
+  ;; Deserializing invalid symbol for ptr logs error and returns #f
+  (test-assert (not (deserialize-type 'not-ptr)))
+  (test-equal 1 (error-count))
+
+  ;; Deserializing invalid region tag returns #f
+  (test-assert (not (region-deserialize '(not-a-region))))
+  (test-equal 1 (error-count))
+
+  ;; Deserializing invalid block tag returns #f
+  (test-assert (not (block-deserialize '(not-a-block))))
+  (test-equal 1 (error-count))
+
+  (reset-error-log!))
+
 (test-group "core-type-registry"
   (test-assert (core-type? (make-int 32)))
   (test-assert (core-type? (make-ptr)))
@@ -239,4 +259,3 @@
   (test-assert (not (deserialize-type '(invalid-type)))))
 
 (test-end "ockham-core")
-

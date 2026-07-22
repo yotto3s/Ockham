@@ -234,15 +234,15 @@
 
     ;; Non-int / non-ptr type (e.g. invalid type object) in add logs error
     (add-serialize (make-add "invalid-type" '%a '%b))
-    (test-equal 2 (error-count))
+    (test-equal 3 (error-count))
 
     ;; Invalid (non-int) type in mul: logs error via okm-assert
     (mul-serialize (make-mul p '%a '%b))
-    (test-equal 3 (error-count))
+    (test-equal 4 (error-count))
 
     ;; Block label (^bb1) is excluded, but non-register block arg (123) logs error
     (jmp-serialize (make-jmp '(^bb1 123)))
-    (test-equal 4 (error-count))
+    (test-equal 5 (error-count))
 
     (reset-error-log!)))
 

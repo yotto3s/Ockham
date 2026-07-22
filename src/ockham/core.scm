@@ -107,20 +107,29 @@
     (fields
       (immutable size int-size)))
 
-  (define (int-serialize okm) `(int ,(int-size okm)))
+  (define (int-serialize okm)
+    (okm-assert (int? okm))
+    `(int ,(int-size okm)))
 
   (define (int-deserialize lst)
     (match lst
-      (('int size) (make-int size))
+      (('int size)
+       (okm-assert-guard
+         ((integer? size)
+          (> size 0))
+         (make-int size)))
       (_ #f)))
 
   ;; Pointer
   (define-record-type (ptr make-ptr ptr?))
-  (define (ptr-serialize ptr) 'ptr)
+  (define (ptr-serialize ptr)
+    (okm-assert (ptr? ptr))
+    'ptr)
+
   (define (ptr-deserialize p)
-    (if (eq? p 'ptr)
-      (make-ptr)
-      #f))
+    (match p
+      ('ptr (make-ptr))
+      (_ #f)))
 
   ;; Core Type Registry
   (define *core-type-predicates* (list int? ptr?))
@@ -141,6 +150,7 @@
     (exists (lambda (pred) (pred obj)) *core-type-predicates*))
 
   (define (serialize-type obj)
+    (okm-assert (core-type? obj))
     (let loop ((entries *core-type-serializers*))
       (if (null? entries)
           #f
@@ -193,12 +203,16 @@
     (case-lambda
       ((lst) (region-deserialize lst #f))
       ((lst parent)
-       (if (eq? (car lst) 'region)
-         (let ((region (make-region #f parent)))
-           (set-region-blocks!
-             region (map (lambda (block) (block-deserialize block region)) (cdr lst)))
-           region)
-         #f))))
+       (match lst
+         (('region . blocks-sexp)
+          (let ((region (make-region #f parent)))
+            (let ((blocks (map (lambda (block) (block-deserialize block region)) blocks-sexp)))
+              (okm-assert-guard
+                ((for-all block? blocks))
+                (begin
+                  (set-region-blocks! region blocks)
+                  region)))))
+         (_ #f)))))
 
 
   ;; Block
@@ -212,13 +226,16 @@
     (case-lambda
       ((lst) (block-deserialize lst #f))
       ((lst parent)
-       (if (eq? (car lst) 'block)
-         (let* ((name (cadr lst))
-                (block (make-block name #f parent)))
-           (set-block-ops!
-             block (map (lambda (op) (read-operation op block)) (cddr lst)))
-           block)
-         #f))))
+       (match lst
+         (('block name . ops-sexp)
+          (let ((block (make-block name #f parent)))
+            (let ((ops (map (lambda (op) (read-operation op block)) ops-sexp)))
+              (okm-assert-guard
+                ((for-all operation? ops))
+                (begin
+                  (set-block-ops! block ops)
+                  block)))))
+         (_ #f)))))
 
   ;; Operation
   (define-record-type (operation make-operation operation?)
@@ -246,9 +263,12 @@
                (op-type (car op-part))
                (op (deserialize-op op-part))
                (attributes (cdr operation)))
-           (make-operation op-type op targets attributes parent)))))
+          (okm-assert-guard
+            (op)
+            (make-operation op-type op targets attributes parent))))))
 
   (define (operation-serialize op)
+    (okm-assert (operation? op))
     (let* ((op-type (operation-op-type op))
            (inner-op (operation-op op))
            (serialized-op (serialize-op op-type inner-op))
@@ -260,11 +280,13 @@
           (append targets (cons '= op-part)))))
 
   (define (block-serialize block)
+    (okm-assert (block? block))
     (cons 'block
           (cons (block-name block)
                 (map operation-serialize (block-ops block)))))
 
   (define (region-serialize region)
+    (okm-assert (region? region))
     (cons 'region
           (map block-serialize (region-blocks region))))
 
