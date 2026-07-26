@@ -440,6 +440,27 @@
     (test-assert (func-type? (extern-type (operation-op op))))
     (test-equal op-sexp (operation-serialize op))))
 
+(test-group "be:module-serialization"
+  (let* ((blk (make-block '^bb0 '() #f))
+         (reg (make-region (list blk) #f))
+         (m (make-module '$my_module reg))
+         (s (module-serialize m))
+         (d (module-deserialize s)))
+    (test-equal '(be:module $my_module (region (block ^bb0))) s)
+    (test-assert (module? d))
+    (test-equal '$my_module (module-name d))
+    (test-assert (region? (module-body d)))))
+
+(test-group "be:module-core-integration"
+  (let* ((op-sexp '((be:module $main_module (region (block ^bb0)))))
+         (op (read-operation op-sexp #f)))
+    (test-assert (operation? op))
+    (test-equal 'be:module (operation-op-type op))
+    (test-assert (module? (operation-op op)))
+    (test-equal '$main_module (module-name (operation-op op)))
+    (test-assert (region? (module-body (operation-op op))))
+    (test-equal op-sexp (operation-serialize op))))
+
 (test-group "define-dialect-op-custom-names"
   (let* ((c (make-be-test-copy 123))
          (s (serialize-op 'be:test-copy c))

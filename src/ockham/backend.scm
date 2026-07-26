@@ -93,7 +93,11 @@
 
           extern make-extern extern?
           extern-name extern-type
-          extern-serialize extern-deserialize)
+          extern-serialize extern-deserialize
+
+          module make-module module?
+          module-name module-body
+          module-serialize module-deserialize)
   (import (rnrs (6))
           (ufo-match)
           (ockham core))
@@ -490,5 +494,24 @@
                ((okm-valid-symbol-name? name)
                 t)
                (make-extern name t))))))))
+
+  (define-dialect-op (be module)
+    (fields
+      (immutable name module-name)
+      (immutable body module-body))
+    (serializer
+      (lambda (op)
+        (okm-assert (symbol? (module-name op)))
+        (okm-assert (region? (module-body op)))
+        `(_ ,(module-name op) ,(region-serialize (module-body op)))))
+    (deserializer
+      (lambda (lst)
+        (okm-match lst
+          ((_ name body-sexp)
+           (let ((body (region-deserialize body-sexp)))
+             (okm-assert-guard
+               ((symbol? name)
+                body)
+               (make-module name body))))))))
 )
 
