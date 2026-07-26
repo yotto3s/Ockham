@@ -196,7 +196,7 @@
     (and (symbol? sym)
          (let ((str (symbol->string sym)))
            (and (> (string-length str) 1)
-                (char=? (string-ref str 0) #\@)))))
+                (char=? (string-ref str 0) #\$)))))
 
   ;; Region
   (define-record-type (region make-region region?)

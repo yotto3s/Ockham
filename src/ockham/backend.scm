@@ -81,7 +81,15 @@
 
           func make-func func?
           func-name func-args func-return-types func-body
-          func-serialize func-deserialize)
+          func-serialize func-deserialize
+
+          global-int make-global-int global-int?
+          global-int-name global-int-bit-width global-int-init-value
+          global-int-serialize global-int-deserialize
+
+          global-bytes make-global-bytes global-bytes?
+          global-bytes-name global-bytes-data global-bytes-null-terminate?
+          global-bytes-serialize global-bytes-deserialize)
   (import (rnrs (6))
           (ufo-match)
           (ockham core))
@@ -387,5 +395,77 @@
                 rets
                 body)
                (make-func name args rets body))))))))
+
+  (define-dialect-op (be global-int)
+    (fields
+      (immutable name global-int-name)
+      (immutable bit-width global-int-bit-width)
+      (immutable init-value global-int-init-value))
+    (serializer
+      (lambda (op)
+        (okm-assert (okm-valid-symbol-name? (global-int-name op)))
+        (okm-assert (and (integer? (global-int-bit-width op)) (> (global-int-bit-width op) 0)))
+        (okm-assert (integer? (global-int-init-value op)))
+        `(_ ,(global-int-name op) ,(global-int-bit-width op) ,(global-int-init-value op))))
+    (deserializer
+      (lambda (lst)
+        (okm-match lst
+          ((_ name bit-width init-value)
+           (okm-assert-guard
+             ((okm-valid-symbol-name? name)
+              (integer? bit-width)
+              (> bit-width 0)
+              (integer? init-value))
+             (make-global-int name bit-width init-value)))
+          (('be:global.int name bit-width init-value)
+           (okm-assert-guard
+             ((okm-valid-symbol-name? name)
+              (integer? bit-width)
+              (> bit-width 0)
+              (integer? init-value))
+             (make-global-int name bit-width init-value)))))))
+
+  (define-dialect-op (be (global-bytes %make-global-bytes global-bytes?))
+    (fields
+      (immutable name global-bytes-name)
+      (immutable data global-bytes-data)
+      (immutable null-terminate? global-bytes-null-terminate?))
+    (serializer
+      (lambda (op)
+        (okm-assert (okm-valid-symbol-name? (global-bytes-name op)))
+        (okm-assert (string? (global-bytes-data op)))
+        (if (global-bytes-null-terminate? op)
+            `(_ ,(global-bytes-name op) ,(global-bytes-data op))
+            `(_ ,(global-bytes-name op) ,(global-bytes-data op) #f))))
+    (deserializer
+      (lambda (lst)
+        (okm-match lst
+          ((_ name data null-term)
+           (okm-assert-guard
+             ((okm-valid-symbol-name? name)
+              (string? data)
+              (boolean? null-term))
+             (%make-global-bytes name data null-term)))
+          ((_ name data)
+           (okm-assert-guard
+             ((okm-valid-symbol-name? name)
+              (string? data))
+             (%make-global-bytes name data #t)))
+          (('be:global.bytes name data null-term)
+           (okm-assert-guard
+             ((okm-valid-symbol-name? name)
+              (string? data)
+              (boolean? null-term))
+             (%make-global-bytes name data null-term)))
+          (('be:global.bytes name data)
+           (okm-assert-guard
+             ((okm-valid-symbol-name? name)
+              (string? data))
+             (%make-global-bytes name data #t)))))))
+
+  (define make-global-bytes
+    (case-lambda
+      ((name data) (%make-global-bytes name data #t))
+      ((name data null-term) (%make-global-bytes name data null-term))))
 )
 

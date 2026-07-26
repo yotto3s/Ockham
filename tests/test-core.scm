@@ -80,14 +80,14 @@
     (test-equal #f (register-def reg))))
 
 (test-group "okm-symbol"
-  (test-assert (okm-valid-symbol-name? '\x40;foo))
-  (test-assert (okm-valid-symbol-name? '\x40;1))
+  (test-assert (okm-valid-symbol-name? '$foo))
+  (test-assert (okm-valid-symbol-name? '$1))
   (test-assert (not (okm-valid-symbol-name? 'foo)))
-  (test-assert (not (okm-valid-symbol-name? '\x40;)))
+  (test-assert (not (okm-valid-symbol-name? '$)))
   (test-assert (not (okm-valid-symbol-name? 123)))
-  (let ((sym (make-okm-symbol '\x40;foo 'int #f)))
+  (let ((sym (make-okm-symbol '$foo 'int #f)))
     (test-assert (okm-symbol? sym))
-    (test-equal '\x40;foo (okm-symbol-name sym))
+    (test-equal '$foo (okm-symbol-name sym))
     (test-equal 'int (okm-symbol-type sym))
     (test-equal #f (okm-symbol-def sym))))
 
