@@ -411,6 +411,35 @@
     (test-equal "hello" (global-bytes-data (operation-op op)))
     (test-equal op-sexp (operation-serialize op))))
 
+(test-group "be:extern-serialization"
+  (let* ((e1 (make-extern '$printf (make-int 32)))
+         (s1 (extern-serialize e1))
+         (d1 (extern-deserialize s1))
+         (fn-ty (make-func-type (list (make-ptr)) (list (make-int 32))))
+         (e2 (make-extern '$puts fn-ty))
+         (s2 (extern-serialize e2))
+         (d2 (extern-deserialize s2)))
+    (test-equal '(be:extern $printf (int 32)) s1)
+    (test-assert (extern? d1))
+    (test-equal '$printf (extern-name d1))
+    (test-assert (int? (extern-type d1)))
+    (test-equal 32 (int-size (extern-type d1)))
+
+    (test-equal '(be:extern $puts (func (ptr) -> ((int 32)))) s2)
+    (test-assert (extern? d2))
+    (test-equal '$puts (extern-name d2))
+    (test-assert (func-type? (extern-type d2)))))
+
+(test-group "be:extern-core-integration"
+  (let* ((op-sexp '((be:extern $malloc (func ((int 64)) -> (ptr)))))
+         (op (read-operation op-sexp #f)))
+    (test-assert (operation? op))
+    (test-equal 'be:extern (operation-op-type op))
+    (test-assert (extern? (operation-op op)))
+    (test-equal '$malloc (extern-name (operation-op op)))
+    (test-assert (func-type? (extern-type (operation-op op))))
+    (test-equal op-sexp (operation-serialize op))))
+
 (test-group "define-dialect-op-custom-names"
   (let* ((c (make-be-test-copy 123))
          (s (serialize-op 'be:test-copy c))

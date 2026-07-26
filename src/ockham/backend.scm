@@ -89,7 +89,11 @@
 
           global-bytes make-global-bytes global-bytes?
           global-bytes-name global-bytes-data global-bytes-null-terminate?
-          global-bytes-serialize global-bytes-deserialize)
+          global-bytes-serialize global-bytes-deserialize
+
+          extern make-extern extern?
+          extern-name extern-type
+          extern-serialize extern-deserialize)
   (import (rnrs (6))
           (ufo-match)
           (ockham core))
@@ -467,5 +471,24 @@
     (case-lambda
       ((name data) (%make-global-bytes name data #t))
       ((name data null-term) (%make-global-bytes name data null-term))))
+
+  (define-dialect-op (be extern)
+    (fields
+      (immutable name extern-name)
+      (immutable type extern-type))
+    (serializer
+      (lambda (op)
+        (okm-assert (okm-valid-symbol-name? (extern-name op)))
+        (okm-assert (core-type? (extern-type op)))
+        `(_ ,(extern-name op) ,(serialize-type (extern-type op)))))
+    (deserializer
+      (lambda (lst)
+        (okm-match lst
+          ((_ name ty-sexp)
+           (let ((t (deserialize-type ty-sexp)))
+             (okm-assert-guard
+               ((okm-valid-symbol-name? name)
+                t)
+               (make-extern name t))))))))
 )
 
