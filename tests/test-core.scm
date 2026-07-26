@@ -67,6 +67,22 @@
     (test-assert (not (ptr-deserialize 'int)))
     (test-assert (not (ptr-deserialize '(ptr))))))
 
+(test-group "func-type"
+  (let* ((i32 (make-int 32))
+         (p (make-ptr))
+         (ft (make-func-type (list i32 p) (list i32)))
+         (s (func-type-serialize ft))
+         (d (func-type-deserialize s))
+         (d2 (deserialize-type '(func ((int 32) ptr) -> ((int 32))))))
+    (test-assert (func-type? ft))
+    (test-equal '(func ((int 32) ptr) -> ((int 32))) s)
+    (test-assert (func-type? d))
+    (test-equal 2 (length (func-type-param-types d)))
+    (test-equal 1 (length (func-type-return-types d)))
+    (test-assert (func-type? d2))
+    (test-equal '(func ((int 32) ptr) -> ((int 32))) (serialize-type d2))
+    (test-assert (core-type? d2))))
+
 (test-group "register"
   (test-assert (valid-register-name? '%rax))
   (test-assert (valid-register-name? '%1))

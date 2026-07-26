@@ -9,6 +9,10 @@
     ptr make-ptr ptr?
     ptr-serialize ptr-deserialize
 
+    func-type make-func-type func-type?
+    func-type-param-types func-type-return-types
+    func-type-serialize func-type-deserialize
+
     register make-register register?
     register-name register-type register-def
     valid-register-name?
@@ -136,10 +140,44 @@
     (okm-match p
       ('ptr (make-ptr))))
 
+  ;; Function Type
+  (define-record-type (func-type make-func-type func-type?)
+    (fields
+      (immutable param-types func-type-param-types)
+      (immutable return-types func-type-return-types)))
+
+  (define (parse-type-list sexp)
+    (if (null? sexp)
+        '()
+        (if (list? sexp)
+            (let ((ts (map deserialize-type sexp)))
+              (if (for-all core-type? ts)
+                  ts
+                  (let ((single (deserialize-type sexp)))
+                    (if single (list single) #f))))
+            (let ((single (deserialize-type sexp)))
+              (if single (list single) #f)))))
+
+  (define (func-type-serialize fn-ty)
+    (okm-assert (func-type? fn-ty))
+    (let ((params-sexp (map serialize-type (func-type-param-types fn-ty)))
+          (returns-sexp (map serialize-type (func-type-return-types fn-ty))))
+      `(func ,params-sexp -> ,returns-sexp)))
+
+  (define (func-type-deserialize sexp)
+    (okm-match sexp
+      (('func params-sexp '-> rets-sexp)
+       (let ((param-types (parse-type-list params-sexp))
+             (ret-types (parse-type-list rets-sexp)))
+         (okm-assert-guard
+           (param-types
+            ret-types)
+           (make-func-type param-types ret-types))))))
+
   ;; Core Type Registry
-  (define *core-type-predicates* (list int? ptr?))
-  (define *core-type-deserializers* (list int-deserialize ptr-deserialize))
-  (define *core-type-serializers* (list (cons int? int-serialize) (cons ptr? ptr-serialize)))
+  (define *core-type-predicates* (list int? ptr? func-type?))
+  (define *core-type-deserializers* (list int-deserialize ptr-deserialize func-type-deserialize))
+  (define *core-type-serializers* (list (cons int? int-serialize) (cons ptr? ptr-serialize) (cons func-type? func-type-serialize)))
 
   (define (register-core-type pred serializer deserializer)
     (set! *core-type-predicates* (cons pred *core-type-predicates*))
