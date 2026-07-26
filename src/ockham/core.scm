@@ -26,7 +26,7 @@
     block-serialize block-deserialize
 
     operation make-operation operation?
-    operation-op-type operation-op operation-targets
+    operation-op-type operation-op operation-targets set-operation-targets!
     operation-attributes operation-parent
     read-operation operation-serialize
 
@@ -245,7 +245,7 @@
     (fields
       (immutable op-type operation-op-type)
       (immutable op operation-op)
-      (immutable targets operation-targets)
+      (mutable targets operation-targets set-operation-targets!)
       (immutable attributes operation-attributes)
       (immutable parent operation-parent)))
 
@@ -258,17 +258,37 @@
 
   (define (read-operation lst parent)
     (let-values (((front rest) (split-at-symbol lst '=)))
-      (let-values (((targets operation)
-        (if (null? rest)
-          (values '() front)
-          (values front (cdr rest)))))
-        (let* ((op-part (car operation))
-               (op-type (car op-part))
-               (op (deserialize-op op-part))
-               (attributes (cdr operation)))
-          (okm-assert-guard
-            (op)
-            (make-operation op-type op targets attributes parent))))))
+      (if (null? rest)
+          ;; No targets
+          (let* ((op-part (car front))
+                 (op-type (car op-part))
+                 (op (deserialize-op op-part))
+                 (attributes (cdr front)))
+            (okm-assert-guard
+              (op)
+              (make-operation op-type op '() attributes parent)))
+          ;; With targets
+          (let-values (((names-part rest-colon) (split-at-symbol front ':)))
+            (if (null? rest-colon)
+                (begin (okm-assert #f) #f)
+                (let* ((types-part (cdr rest-colon))
+                       (types (map deserialize-type types-part))
+                       (operation-parts (cdr rest))
+                       (op-part (car operation-parts))
+                       (op-type (car op-part))
+                       (op (deserialize-op op-part))
+                       (attributes (cdr operation-parts)))
+                  (okm-assert-guard
+                    (op
+                     (for-all valid-register-name? names-part)
+                     (for-all core-type? types)
+                     (= (length names-part) (length types)))
+                    (let* ((op-record (make-operation op-type op '() attributes parent))
+                           (registers (map (lambda (name type)
+                                             (make-register name type op-record))
+                                           names-part types)))
+                      (set-operation-targets! op-record registers)
+                      op-record))))))))
 
   (define (operation-serialize op)
     (okm-assert (operation? op))
@@ -280,7 +300,9 @@
            (op-part (cons serialized-op attributes)))
       (if (null? targets)
           op-part
-          (append targets (cons '= op-part)))))
+          (let ((names-part (map register-name targets))
+                (types-part (map (lambda (r) (serialize-type (register-type r))) targets)))
+            (append names-part (cons ': (append types-part (cons '= op-part))))))))
 
   (define (block-serialize block)
     (okm-assert (block? block))

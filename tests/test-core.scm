@@ -107,15 +107,36 @@
       (test-equal '() (target-constraints tgt)))))
 
 (test-group "operation-parsing"
-  (let* ((op-lst '(%res = (test-op 42) attr1 attr2))
+  (let* ((op-lst '(%res : (int 32) = (test-op 42) attr1 attr2))
          (op (read-operation op-lst #f)))
     (test-assert (operation? op))
     (test-equal 'test-op (operation-op-type op))
     (test-assert (test-op? (operation-op op)))
     (test-equal 42 (test-op-value (operation-op op)))
-    (test-equal '(%res) (operation-targets op))
+    (let ((targets (operation-targets op)))
+      (test-equal 1 (length targets))
+      (let ((reg (car targets)))
+        (test-assert (register? reg))
+        (test-equal '%res (register-name reg))
+        (test-assert (int? (register-type reg)))
+        (test-equal 32 (int-size (register-type reg)))
+        (test-equal op (register-def reg))))
     (test-equal '(attr1 attr2) (operation-attributes op))
     (test-equal #f (operation-parent op)))
+
+  (let* ((op-lst '(%r1 %r2 : (int 32) ptr = (test-op 42)))
+         (op (read-operation op-lst #f)))
+    (test-assert (operation? op))
+    (let ((targets (operation-targets op)))
+      (test-equal 2 (length targets))
+      (let ((reg1 (car targets))
+            (reg2 (cadr targets)))
+        (test-equal '%r1 (register-name reg1))
+        (test-assert (int? (register-type reg1)))
+        (test-equal op (register-def reg1))
+        (test-equal '%r2 (register-name reg2))
+        (test-assert (ptr? (register-type reg2)))
+        (test-equal op (register-def reg2)))))
 
   (let* ((op-lst '((test-op 100)))
          (op (read-operation op-lst #f)))
@@ -129,7 +150,7 @@
 
 (test-group "block-parsing"
   (let* ((block-lst '(block bb0
-                      (%res = (test-op 42) attr1)
+                      (%res : (int 32) = (test-op 42) attr1)
                       ((test-op 100))))
          (blk (block-deserialize block-lst)))
     (test-assert (block? blk))
@@ -151,7 +172,7 @@
 (test-group "region-parsing"
   (let* ((region-lst '(region
                        (block
-                         (%res = (test-op 42)))
+                         (%res : (int 32) = (test-op 42)))
                        (block
                          ((test-op 100)))))
          (reg (region-deserialize region-lst)))
@@ -182,7 +203,7 @@
 
 (test-group "block-serialization"
   (let* ((block-lst '(block bb0
-                      (%res = (test-op 42) attr1)
+                      (%res : (int 32) = (test-op 42) attr1)
                       ((test-op 100))))
          (blk (block-deserialize block-lst)))
     (test-equal block-lst (block-serialize blk))))
@@ -190,7 +211,7 @@
 (test-group "region-serialization"
   (let* ((region-lst '(region
                        (block bb0
-                         (%res = (test-op 42)))
+                         (%res : (int 32) = (test-op 42)))
                        (block bb1
                          ((test-op 100)))))
          (reg (region-deserialize region-lst)))

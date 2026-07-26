@@ -32,7 +32,7 @@
   (test-assert (not (constant-deserialize '(be:constant)))))
 
 (test-group "be:constant-core-integration"
-  (let* ((op-sexp '(%res = (be:constant 42)))
+  (let* ((op-sexp '(%res : (int 32) = (be:constant 42)))
          (op (read-operation op-sexp #f)))
     (test-assert (operation? op))
     (test-equal 'be:constant (operation-op-type op))
@@ -49,7 +49,7 @@
     (test-equal '%a (copy-operand d))))
 
 (test-group "be:copy-core-integration"
-  (let* ((op-sexp '(%res = (be:copy %src)))
+  (let* ((op-sexp '(%res : (int 32) = (be:copy %src)))
          (op (read-operation op-sexp #f)))
     (test-assert (operation? op))
     (test-equal 'be:copy (operation-op-type op))
@@ -149,7 +149,7 @@
     (test-equal 0 (store-offset d3))))
 
 (test-group "be:load-store-core-integration"
-  (let* ((op-load-sexp '(%res = (be:load %ptr 8)))
+  (let* ((op-load-sexp '(%res : (int 32) = (be:load %ptr 8)))
          (op-store-sexp '((be:store %ptr %val 4)))
          (op-load (read-operation op-load-sexp #f))
          (op-store (read-operation op-store-sexp #f)))
@@ -282,7 +282,7 @@
     (test-equal '(%x %y) (call-args d2))))
 
 (test-group "be:call-core-integration"
-  (let* ((op-call-sexp '(%res = (be:call \x40;fib %a)))
+  (let* ((op-call-sexp '(%res : (int 32) = (be:call \x40;fib %a)))
          (op (read-operation op-call-sexp #f)))
     (test-assert (operation? op))
     (test-equal 'be:call (operation-op-type op))
