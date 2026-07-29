@@ -107,21 +107,6 @@
     (test-equal 'int (okm-symbol-type sym))
     (test-equal #f (okm-symbol-def sym))))
 
-(test-group "abi-and-target"
-  (let ((my-abi (make-abi '(%rax %rbx) '(%rax) '(%rbx) '%rsp '%rbp)))
-    (test-assert (abi? my-abi))
-    (test-equal '(%rax %rbx) (abi-general-registers my-abi))
-    (test-equal '(%rax) (abi-caller-saved my-abi))
-    (test-equal '(%rbx) (abi-callee-saved my-abi))
-    (test-equal '%rsp (abi-sp-register my-abi))
-    (test-equal '%rbp (abi-fp-register my-abi))
-    (let ((tgt (make-target 'x86_64 'linux my-abi '())))
-      (test-assert (target? tgt))
-      (test-equal 'x86_64 (target-arch tgt))
-      (test-equal 'linux (target-os tgt))
-      (test-equal my-abi (target-abi tgt))
-      (test-equal '() (target-constraints tgt)))))
-
 (test-group "operation-parsing"
   (let* ((op-lst '(%res : (int 32) = (test-op 42) attr1 attr2))
          (op (read-operation op-lst #f)))

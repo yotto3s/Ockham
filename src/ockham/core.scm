@@ -35,7 +35,7 @@
     read-operation operation-serialize
 
     abi make-abi abi?
-    abi-general-registers abi-caller-saved abi-callee-saved
+    abi-general-registers abi-caller-saved abi-callee-saved abi-subregisters
     abi-sp-register abi-fp-register
 
     target make-target target?
@@ -358,6 +358,7 @@
       (immutable general-registers abi-general-registers)
       (immutable caller-saved abi-caller-saved)
       (immutable callee-saved abi-callee-saved)
+      (immutable subregisters abi-subregisters)
       (immutable sp-register abi-sp-register)
       (immutable fp-register abi-fp-register)))
 
