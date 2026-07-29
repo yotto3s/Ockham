@@ -102,11 +102,6 @@
           (ufo-match)
           (ockham core))
 
-  ; TODO: Impelement core operators
-  (define backend-operators
-    '(constant copy add sub mul idiv udiv lshift rshift irem urem sext zext
-      load store jmp br-cond syscall call ret func global-int global-bytes module extern))
-
   (define-dialect-op (be constant)
     (fields
       (immutable value constant-value))
