@@ -36,7 +36,9 @@
 
     abi make-abi abi?
     abi-general-registers abi-caller-saved abi-callee-saved abi-subregisters
-    abi-sp-register abi-fp-register
+    abi-argument-registers abi-return-registers abi-sp-register abi-fp-register
+    abi-caller-saved-register? abi-callee-saved-register? abi-argument-register?
+    abi-argument-register? abi-return-register?
 
     target make-target target?
     target-arch target-os target-abi target-constraints
@@ -358,9 +360,28 @@
       (immutable general-registers abi-general-registers)
       (immutable caller-saved abi-caller-saved)
       (immutable callee-saved abi-callee-saved)
+      (immutable argument-registers abi-argument-registers)
+      (immutable return-registers abi-return-registers)
       (immutable subregisters abi-subregisters)
       (immutable sp-register abi-sp-register)
       (immutable fp-register abi-fp-register)))
+
+  (define-syntax define-register-predicate
+    (syntax-rules ()
+      ((_ funname accessor)
+       (define (funname abi reg)
+         (not (not (memq reg (accessor abi))))))))
+
+  (define-syntax define-register-predicates
+    (syntax-rules ()
+      ((_ (funname acc) ...)
+       (begin (define-register-predicate funname acc) ...))))
+
+  (define-register-predicates
+    (abi-caller-saved-register? abi-caller-saved)
+    (abi-callee-saved-register? abi-callee-saved)
+    (abi-argument-register? abi-argument-registers)
+    (abi-return-register? abi-return-registers))
 
   (define-record-type (target make-target target?)
     (fields
