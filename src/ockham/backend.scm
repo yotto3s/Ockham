@@ -508,5 +508,12 @@
                ((symbol? name)
                 body)
                (make-module name body))))))))
-)
 
+  (define init-backend-ops!
+    (lambda ()
+      (list constant? copy? add? sub? mul? idiv? udiv? lshift? rshift? irem? urem?
+            sext? zext? load? store? jmp? br-cond? syscall? call? ret? func?
+            global-int? global-bytes? extern? module?)))
+
+  (init-backend-ops!)
+)

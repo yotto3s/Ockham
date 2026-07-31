@@ -14,7 +14,7 @@
     func-type-serialize func-type-deserialize
 
     register make-register register?
-    register-name register-type register-def
+    register-name register-type
     valid-register-name?
 
     okm-symbol make-okm-symbol okm-symbol?
@@ -22,16 +22,16 @@
     okm-valid-symbol-name?
 
     region make-region region?
-    region-blocks set-region-blocks! region-parent set-region-parent!
+    region-blocks
     region-serialize region-deserialize
 
     block make-block block?
-    block-name block-ops set-block-ops! block-parent set-block-parent!
+    block-name block-ops
     block-serialize block-deserialize
 
     operation make-operation operation?
-    operation-op-type operation-op operation-targets set-operation-targets!
-    operation-attributes operation-parent
+    operation-op-type operation-op operation-targets
+    operation-attributes
     read-operation operation-serialize
 
     abi make-abi abi?
@@ -44,7 +44,7 @@
     target-arch target-os target-abi target-constraints
 
     log-error okm-assert okm-assert-guard okm-match error-count error-messages reset-error-log!
-    core-type? register-core-type unregister-core-type serialize-type deserialize-type)
+    core-type? serialize-type deserialize-type)
   (import (rnrs (6))
           (ufo-match))
 
@@ -181,16 +181,6 @@
   (define *core-type-deserializers* (list int-deserialize ptr-deserialize func-type-deserialize))
   (define *core-type-serializers* (list (cons int? int-serialize) (cons ptr? ptr-serialize) (cons func-type? func-type-serialize)))
 
-  (define (register-core-type pred serializer deserializer)
-    (set! *core-type-predicates* (cons pred *core-type-predicates*))
-    (set! *core-type-serializers* (cons (cons pred serializer) *core-type-serializers*))
-    (set! *core-type-deserializers* (cons deserializer *core-type-deserializers*)))
-
-  (define (unregister-core-type pred)
-    (set! *core-type-predicates* (remp (lambda (p) (eq? p pred)) *core-type-predicates*))
-    (set! *core-type-serializers* (remp (lambda (entry) (eq? (car entry) pred)) *core-type-serializers*))
-    (set! *core-type-deserializers* (remp (lambda (d) (eq? d pred)) *core-type-deserializers*)))
-
   (define (core-type? obj)
     (exists (lambda (pred) (pred obj)) *core-type-predicates*))
 
@@ -216,8 +206,7 @@
   (define-record-type (register make-register register?)
     (fields
       (immutable name register-name)
-      (immutable type register-type)
-      (immutable def register-def)))
+      (immutable type register-type)))
 
   (define (valid-register-name? reg)
     (and (symbol? reg)
@@ -241,53 +230,38 @@
   ;; Region
   (define-record-type (region make-region region?)
     (fields
-      (mutable blocks region-blocks set-region-blocks!)
-      (mutable parent region-parent set-region-parent!)))
+      (immutable blocks region-blocks)))
 
-  (define region-deserialize
-    (case-lambda
-      ((lst) (region-deserialize lst #f))
-      ((lst parent)
-       (okm-match lst
-         (('region . blocks-sexp)
-          (let ((region (make-region #f parent)))
-            (let ((blocks (map (lambda (block) (block-deserialize block region)) blocks-sexp)))
-              (okm-assert-guard
-                ((for-all block? blocks))
-                (begin
-                  (set-region-blocks! region blocks)
-                  region)))))))))
+  (define (region-deserialize lst)
+    (okm-match lst
+      (('region . blocks-sexp)
+       (let ((blocks (map block-deserialize blocks-sexp)))
+         (okm-assert-guard
+           ((for-all block? blocks))
+           (make-region blocks))))))
 
 
   ;; Block
   (define-record-type (block make-block block?)
     (fields
       (immutable name block-name)
-      (mutable ops block-ops set-block-ops!)
-      (mutable parent block-parent set-block-parent!)))
+      (immutable ops block-ops)))
 
-  (define block-deserialize
-    (case-lambda
-      ((lst) (block-deserialize lst #f))
-      ((lst parent)
-       (okm-match lst
-         (('block name . ops-sexp)
-          (let ((block (make-block name #f parent)))
-            (let ((ops (map (lambda (op) (read-operation op block)) ops-sexp)))
-              (okm-assert-guard
-                ((for-all operation? ops))
-                (begin
-                  (set-block-ops! block ops)
-                  block)))))))))
+  (define (block-deserialize lst)
+    (okm-match lst
+      (('block name . ops-sexp)
+       (let ((ops (map read-operation ops-sexp)))
+         (okm-assert-guard
+           ((for-all operation? ops))
+           (make-block name ops))))))
 
   ;; Operation
   (define-record-type (operation make-operation operation?)
     (fields
       (immutable op-type operation-op-type)
       (immutable op operation-op)
-      (mutable targets operation-targets set-operation-targets!)
-      (immutable attributes operation-attributes)
-      (immutable parent operation-parent)))
+      (immutable targets operation-targets)
+      (immutable attributes operation-attributes)))
 
   (define (split-at-symbol lst sym)
     (cond
@@ -296,7 +270,7 @@
       (else (let-values (((front rest) (split-at-symbol (cdr lst) sym)))
               (values (cons (car lst) front) rest)))))
 
-  (define (read-operation lst parent)
+  (define (read-operation lst)
     (let-values (((front rest) (split-at-symbol lst '=)))
       (if (null? rest)
           ;; No targets
@@ -306,7 +280,7 @@
                  (attributes (cdr front)))
             (okm-assert-guard
               (op)
-              (make-operation op-type op '() attributes parent)))
+              (make-operation op-type op '() attributes)))
           ;; With targets
           (let-values (((names-part rest-colon) (split-at-symbol front ':)))
             (if (null? rest-colon)
@@ -323,12 +297,8 @@
                      (for-all valid-register-name? names-part)
                      (for-all core-type? types)
                      (= (length names-part) (length types)))
-                    (let* ((op-record (make-operation op-type op '() attributes parent))
-                           (registers (map (lambda (name type)
-                                             (make-register name type op-record))
-                                           names-part types)))
-                      (set-operation-targets! op-record registers)
-                      op-record))))))))
+                    (let ((registers (map make-register names-part types)))
+                      (make-operation op-type op registers attributes)))))))))
 
   (define (operation-serialize op)
     (okm-assert (operation? op))
@@ -482,11 +452,14 @@
                          #'(define deser-name transformed-deser)))
                    (actual-ser-proc (if (identifier? #'ser-expr) #'ser-expr #'ser-name))
                    (actual-deser-proc (if (identifier? #'deser-expr) #'deser-expr #'deser-name))
-                   (reg-dummy (symbolic-append #'op-name #'op-name "-reg-dummy")))
+                   (reg-dummy (symbolic-append #'op-name #'op-name "-reg-dummy"))
+                   (raw-pred-name (symbolic-append #'op-name #'op-name "-raw-pred?")))
                   #'(begin
-                      (define-record-type (op-name make-name pred-name)
+                      (define-record-type (op-name make-name raw-pred-name)
                         (fields field-spec ...))
                       ser-def
                       deser-def
-                      (define reg-dummy (register-op 'op-sym actual-ser-proc actual-deser-proc)))))))))))))
+                      (define reg-dummy (register-op 'op-sym actual-ser-proc actual-deser-proc))
+                      (define (pred-name obj)
+                        (and reg-dummy (raw-pred-name obj))))))))))))))
 )
