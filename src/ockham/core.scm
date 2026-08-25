@@ -271,34 +271,48 @@
               (values (cons (car lst) front) rest)))))
 
   (define (read-operation lst)
-    (let-values (((front rest) (split-at-symbol lst '=)))
-      (if (null? rest)
-          ;; No targets
-          (let* ((op-part (car front))
-                 (op-type (car op-part))
-                 (op (deserialize-op op-part))
-                 (attributes (cdr front)))
-            (okm-assert-guard
-              (op)
-              (make-operation op-type op '() attributes)))
-          ;; With targets
-          (let-values (((names-part rest-colon) (split-at-symbol front ':)))
-            (if (null? rest-colon)
-                (begin (okm-assert #f) #f)
-                (let* ((types-part (cdr rest-colon))
-                       (types (map deserialize-type types-part))
-                       (operation-parts (cdr rest))
-                       (op-part (car operation-parts))
-                       (op-type (car op-part))
-                       (op (deserialize-op op-part))
-                       (attributes (cdr operation-parts)))
-                  (okm-assert-guard
-                    (op
-                     (for-all valid-register-name? names-part)
-                     (for-all core-type? types)
-                     (= (length names-part) (length types)))
-                    (let ((registers (map make-register names-part types)))
-                      (make-operation op-type op registers attributes)))))))))
+    (if (not (and (list? lst) (not (null? lst))))
+        (begin (okm-assert #f) #f)
+        (let-values (((front rest) (split-at-symbol lst '=)))
+          (if (null? rest)
+              ;; No targets
+              (cond
+                ((symbol? (car front))
+                 (let* ((op-part front)
+                        (op-type (car op-part))
+                        (op (deserialize-op op-part)))
+                   (okm-assert-guard
+                     (op)
+                     (make-operation op-type op '() '()))))
+                ((and (pair? (car front)) (symbol? (caar front)))
+                 (let* ((op-part (car front))
+                        (op-type (car op-part))
+                        (op (deserialize-op op-part))
+                        (attributes (cdr front)))
+                   (okm-assert-guard
+                     (op)
+                     (make-operation op-type op '() attributes))))
+                (else
+                 (okm-assert #f)
+                 #f))
+              ;; With targets
+              (let-values (((names-part rest-colon) (split-at-symbol front ':)))
+                (if (null? rest-colon)
+                    (begin (okm-assert #f) #f)
+                    (let* ((types-part (cdr rest-colon))
+                           (types (map deserialize-type types-part))
+                           (operation-parts (cdr rest))
+                           (op-part (car operation-parts))
+                           (op-type (and (pair? op-part) (car op-part)))
+                           (op (and op-type (deserialize-op op-part)))
+                           (attributes (cdr operation-parts)))
+                      (okm-assert-guard
+                        (op
+                         (for-all valid-register-name? names-part)
+                         (for-all core-type? types)
+                         (= (length names-part) (length types)))
+                        (let ((registers (map make-register names-part types)))
+                          (make-operation op-type op registers attributes))))))))))
 
   (define (operation-serialize op)
     (okm-assert (operation? op))
@@ -306,12 +320,14 @@
            (inner-op (operation-op op))
            (serialized-op (serialize-op op-type inner-op))
            (targets (operation-targets op))
-           (attributes (operation-attributes op))
-           (op-part (cons serialized-op attributes)))
+           (attributes (operation-attributes op)))
       (if (null? targets)
-          op-part
+          (if (null? attributes)
+              serialized-op
+              (cons serialized-op attributes))
           (let ((names-part (map register-name targets))
-                (types-part (map (lambda (r) (serialize-type (register-type r))) targets)))
+                (types-part (map (lambda (r) (serialize-type (register-type r))) targets))
+                (op-part (cons serialized-op attributes)))
             (append names-part (cons ': (append types-part (cons '= op-part))))))))
 
   (define (block-serialize block)

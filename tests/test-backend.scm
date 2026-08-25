@@ -150,7 +150,7 @@
 
 (test-group "be:load-store-core-integration"
   (let* ((op-load-sexp '(%res : (int 32) = (be:load %ptr 8)))
-         (op-store-sexp '((be:store %ptr %val 4)))
+         (op-store-sexp '(be:store %ptr %val 4))
          (op-load (read-operation op-load-sexp))
          (op-store (read-operation op-store-sexp)))
     (test-assert (operation? op-load))
@@ -182,8 +182,8 @@
     (test-equal '(^bb2 %y) (br-cond-else-target d))))
 
 (test-group "be:control-flow-core-integration"
-  (let* ((op-jmp-sexp '((be:jmp (^bb1 %a %b))))
-         (op-br-sexp '((be:br-cond %c (^bb1 %a) (^bb2))))
+  (let* ((op-jmp-sexp '(be:jmp (^bb1 %a %b)))
+         (op-br-sexp '(be:br-cond %c (^bb1 %a) (^bb2)))
          (op-jmp (read-operation op-jmp-sexp))
          (op-br (read-operation op-br-sexp)))
     (test-assert (operation? op-jmp))
@@ -256,7 +256,7 @@
   (test-assert (not (syscall-deserialize '(be:syscall 1 %r1 %r2 %r3 %r4 %r5 %r6 %r7)))))
 
 (test-group "be:syscall-core-integration"
-  (let* ((op-sys-sexp '((be:syscall 1 %fd %buf %count)))
+  (let* ((op-sys-sexp '(be:syscall 1 %fd %buf %count))
          (op (read-operation op-sys-sexp)))
     (test-assert (operation? op))
     (test-equal 'be:syscall (operation-op-type op))
@@ -305,7 +305,7 @@
     (test-equal '() (ret-args d0))))
 
 (test-group "be:ret-core-integration"
-  (let* ((op-ret-sexp '((be:ret %r1)))
+  (let* ((op-ret-sexp '(be:ret %r1))
          (op (read-operation op-ret-sexp)))
     (test-assert (operation? op))
     (test-equal 'be:ret (operation-op-type op))
@@ -350,7 +350,7 @@
     (test-assert (ptr? (car (func-return-types d4))))))
 
 (test-group "be:func-core-integration"
-  (let* ((op-func-sexp '((be:func $fib ((%a : (int 32))) -> ((int 32)) (region (block ^bb0)))))
+  (let* ((op-func-sexp '(be:func $fib ((%a : (int 32))) -> ((int 32)) (region (block ^bb0))))
          (op (read-operation op-func-sexp)))
     (test-assert (operation? op))
     (test-equal 'be:func (operation-op-type op))
@@ -372,7 +372,7 @@
     (test-equal 42 (global-int-init-value d2))))
 
 (test-group "be:global-int-core-integration"
-  (let* ((op-sexp '((be:global-int $val 64 100)))
+  (let* ((op-sexp '(be:global-int $val 64 100))
          (op (read-operation op-sexp)))
     (test-assert (operation? op))
     (test-equal 'be:global-int (operation-op-type op))
@@ -402,7 +402,7 @@
     (test-equal "test" (global-bytes-data d3))))
 
 (test-group "be:global-bytes-core-integration"
-  (let* ((op-sexp '((be:global-bytes $msg "hello")))
+  (let* ((op-sexp '(be:global-bytes $msg "hello"))
          (op (read-operation op-sexp)))
     (test-assert (operation? op))
     (test-equal 'be:global-bytes (operation-op-type op))
@@ -431,7 +431,7 @@
     (test-assert (func-type? (extern-type d2)))))
 
 (test-group "be:extern-core-integration"
-  (let* ((op-sexp '((be:extern $malloc (func ((int 64)) -> (ptr)))))
+  (let* ((op-sexp '(be:extern $malloc (func ((int 64)) -> (ptr))))
          (op (read-operation op-sexp)))
     (test-assert (operation? op))
     (test-equal 'be:extern (operation-op-type op))
@@ -452,7 +452,7 @@
     (test-assert (region? (module-body d)))))
 
 (test-group "be:module-core-integration"
-  (let* ((op-sexp '((be:module $main_module (region (block ^bb0)))))
+  (let* ((op-sexp '(be:module $main_module (region (block ^bb0))))
          (op (read-operation op-sexp)))
     (test-assert (operation? op))
     (test-equal 'be:module (operation-op-type op))

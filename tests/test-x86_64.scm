@@ -43,37 +43,37 @@
            '(be:module $mod_dessa_jmp
               (region
                 (block ^bb0
-                  ((be:func $foo ((%a : (int 32)) (%b : (int 32))) -> ((int 32))
-                     (region
-                       (block ^bb1
-                         (%v1 : (int 32) = (be:add %a %b))
-                         ((be:jmp (^bb_join %v1))))
-                       (block ^bb2
-                         (%v2 : (int 32) = (be:sub %a %b))
-                         ((be:jmp (^bb_join %v2))))
-                       (block (^bb_join (%v_param : (int 32)))
-                         (%v_res : (int 32) = (be:add %v_param %c10))
-                         ((be:ret %v_res))))))))))
+                  (be:func $foo ((%a : (int 32)) (%b : (int 32))) -> ((int 32))
+                    (region
+                      (block ^bb1
+                        (%v1 : (int 32) = (be:add %a %b))
+                        (be:jmp (^bb_join %v1)))
+                      (block ^bb2
+                        (%v2 : (int 32) = (be:sub %a %b))
+                        (be:jmp (^bb_join %v2)))
+                      (block (^bb_join (%v_param : (int 32)))
+                        (%v_res : (int 32) = (be:add %v_param %c10))
+                        (be:ret %v_res))))))))
          (expected
            '(be:module $mod_dessa_jmp
               (region
                 (block ^bb0
-                  ((be:func $foo ((%a : (int 32)) (%b : (int 32))) -> ((int 32))
-                     (region
-                       (block ^bb1
-                         (%v1 : (int 32) = (be:copy %a))
-                         (%v1 : (int 32) = (be:add %v1 %b))
-                         (%v_param : (int 32) = (be:copy %v1))
-                         ((be:jmp (^bb_join))))
-                       (block ^bb2
-                         (%v2 : (int 32) = (be:copy %a))
-                         (%v2 : (int 32) = (be:sub %v2 %b))
-                         (%v_param : (int 32) = (be:copy %v2))
-                         ((be:jmp (^bb_join))))
-                       (block ^bb_join
-                         (%v_res : (int 32) = (be:copy %v_param))
-                         (%v_res : (int 32) = (be:add %v_res %c10))
-                         ((be:ret %v_res))))))))))
+                  (be:func $foo ((%a : (int 32)) (%b : (int 32))) -> ((int 32))
+                    (region
+                      (block ^bb1
+                        (%v1 : (int 32) = (be:copy %a))
+                        (%v1 : (int 32) = (be:add %v1 %b))
+                        (%v_param : (int 32) = (be:copy %v1))
+                        (be:jmp (^bb_join)))
+                      (block ^bb2
+                        (%v2 : (int 32) = (be:copy %a))
+                        (%v2 : (int 32) = (be:sub %v2 %b))
+                        (%v_param : (int 32) = (be:copy %v2))
+                        (be:jmp (^bb_join)))
+                      (block ^bb_join
+                        (%v_res : (int 32) = (be:copy %v_param))
+                        (%v_res : (int 32) = (be:add %v_res %c10))
+                        (be:ret %v_res))))))))
          (mod (module-deserialize mod-sexp))
          (legal-mod (pass-legalize-two-address mod))
          (ser (module-serialize legal-mod)))
@@ -85,28 +85,28 @@
            '(be:module $mod_br_cond
               (region
                 (block ^bb0
-                  ((be:func $bar ((%c : (int 32)) (%a : (int 32)) (%b : (int 32))) -> ((int 32))
-                     (region
-                       (block ^bb_start
-                         ((be:br-cond %c (^bb_then %a) (^bb_else %b))))
-                       (block (^bb_then (%p1 : (int 32)))
-                         ((be:ret %p1)))
-                       (block (^bb_else (%p2 : (int 32)))
-                         ((be:ret %p2))))))))))
+                  (be:func $bar ((%c : (int 32)) (%a : (int 32)) (%b : (int 32))) -> ((int 32))
+                    (region
+                      (block ^bb_start
+                        (be:br-cond %c (^bb_then %a) (^bb_else %b)))
+                      (block (^bb_then (%p1 : (int 32)))
+                        (be:ret %p1))
+                      (block (^bb_else (%p2 : (int 32)))
+                        (be:ret %p2))))))))
          (expected
            '(be:module $mod_br_cond
               (region
                 (block ^bb0
-                  ((be:func $bar ((%c : (int 32)) (%a : (int 32)) (%b : (int 32))) -> ((int 32))
-                     (region
-                       (block ^bb_start
-                         (%p1 : (int 32) = (be:copy %a))
-                         (%p2 : (int 32) = (be:copy %b))
-                         ((be:br-cond %c (^bb_then) (^bb_else))))
-                       (block ^bb_then
-                         ((be:ret %p1)))
-                       (block ^bb_else
-                         ((be:ret %p2))))))))))
+                  (be:func $bar ((%c : (int 32)) (%a : (int 32)) (%b : (int 32))) -> ((int 32))
+                    (region
+                      (block ^bb_start
+                        (%p1 : (int 32) = (be:copy %a))
+                        (%p2 : (int 32) = (be:copy %b))
+                        (be:br-cond %c (^bb_then) (^bb_else)))
+                      (block ^bb_then
+                        (be:ret %p1))
+                      (block ^bb_else
+                        (be:ret %p2))))))))
          (mod (module-deserialize mod-sexp))
          (legal-mod (pass-legalize-two-address mod))
          (ser (module-serialize legal-mod)))
