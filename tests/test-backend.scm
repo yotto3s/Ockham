@@ -164,22 +164,25 @@
     (test-equal op-store-sexp (operation-serialize op-store))))
 
 (test-group "be:jmp-serialization"
-  (let* ((j (make-jmp '(^bb1 %x %y)))
+  (let* ((j (make-jmp '^bb1 '(%x %y)))
          (s (jmp-serialize j))
          (d (jmp-deserialize s)))
     (test-equal '(be:jmp (^bb1 %x %y)) s)
     (test-assert (jmp? d))
-    (test-equal '(^bb1 %x %y) (jmp-target d))))
+    (test-equal '^bb1 (jmp-target d))
+    (test-equal '(%x %y) (jmp-args d))))
 
 (test-group "be:br-cond-serialization"
-  (let* ((b (make-br-cond '%cond '(^bb1 %x) '(^bb2 %y)))
+  (let* ((b (make-br-cond '%cond '^bb1 '(%x) '^bb2 '(%y)))
          (s (br-cond-serialize b))
          (d (br-cond-deserialize s)))
     (test-equal '(be:br-cond %cond (^bb1 %x) (^bb2 %y)) s)
     (test-assert (br-cond? d))
     (test-equal '%cond (br-cond-condition d))
-    (test-equal '(^bb1 %x) (br-cond-then-target d))
-    (test-equal '(^bb2 %y) (br-cond-else-target d))))
+    (test-equal '^bb1 (br-cond-then-target d))
+    (test-equal '(%x) (br-cond-then-args d))
+    (test-equal '^bb2 (br-cond-else-target d))
+    (test-equal '(%y) (br-cond-else-args d))))
 
 (test-group "be:control-flow-core-integration"
   (let* ((op-jmp-sexp '(be:jmp (^bb1 %a %b)))
@@ -207,7 +210,7 @@
   (test-equal 1 (error-count))
 
   ;; Block label (^bb1) is excluded, but non-register block arg (123) logs error
-  (jmp-serialize (make-jmp '(^bb1 123)))
+  (jmp-serialize (make-jmp '^bb1 '(123)))
   (test-equal 2 (error-count))
 
   (reset-error-log!))

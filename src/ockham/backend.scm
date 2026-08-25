@@ -60,11 +60,11 @@
           store-serialize store-deserialize
 
           jmp make-jmp jmp?
-          jmp-target
+          jmp-target jmp-args
           jmp-serialize jmp-deserialize
 
           br-cond make-br-cond br-cond?
-          br-cond-condition br-cond-then-target br-cond-else-target
+          br-cond-condition br-cond-then-target br-cond-then-args br-cond-else-target br-cond-else-args
           br-cond-serialize br-cond-deserialize
 
           syscall make-syscall syscall?
@@ -241,51 +241,74 @@
               (valid-register-name? val))
              (make-store ptr val 0)))))))
 
-  (define-dialect-op (be jmp)
+  (define-dialect-op (be (jmp %make-jmp jmp?))
     (fields
-      (immutable target jmp-target))
+      (immutable target jmp-target)
+      (immutable args jmp-args))
     (serializer
       (lambda (op)
-        (let ((tgt (jmp-target op)))
-          (when (and (pair? tgt) (pair? (cdr tgt)))
-            (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr tgt)))
-          `(_ ,tgt))))
+        (let ((tgt (jmp-target op))
+              (args (jmp-args op)))
+          (okm-assert (symbol? tgt))
+          (okm-assert (list? args))
+          (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) args)
+          `(_ (,tgt . ,args)))))
     (deserializer
       (lambda (lst)
         (okm-match lst
-          ((_ target)
+          ((_ (tgt . args))
            (okm-assert-guard
-             ((pair? target)
-              (or (null? (cdr target))
-                  (for-all valid-register-name? (cdr target))))
-             (make-jmp target)))))))
+             ((symbol? tgt)
+              (list? args)
+              (for-all valid-register-name? args))
+             (%make-jmp tgt args)))))))
 
-  (define-dialect-op (be br-cond)
+  (define make-jmp
+    (case-lambda
+      ((target) (%make-jmp target '()))
+      ((target args) (%make-jmp target args))))
+
+  (define-dialect-op (be (br-cond %make-br-cond br-cond?))
     (fields
       (immutable condition br-cond-condition)
       (immutable then-target br-cond-then-target)
-      (immutable else-target br-cond-else-target))
+      (immutable then-args br-cond-then-args)
+      (immutable else-target br-cond-else-target)
+      (immutable else-args br-cond-else-args))
     (serializer
       (lambda (op)
         (okm-assert (valid-register-name? (br-cond-condition op)))
         (let ((then-t (br-cond-then-target op))
-              (else-t (br-cond-else-target op)))
-          (when (and (pair? then-t) (pair? (cdr then-t)))
-            (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr then-t)))
-          (when (and (pair? else-t) (pair? (cdr else-t)))
-            (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) (cdr else-t)))
-          `(_ ,(br-cond-condition op) ,then-t ,else-t))))
+              (then-a (br-cond-then-args op))
+              (else-t (br-cond-else-target op))
+              (else-a (br-cond-else-args op)))
+          (okm-assert (symbol? then-t))
+          (okm-assert (list? then-a))
+          (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) then-a)
+          (okm-assert (symbol? else-t))
+          (okm-assert (list? else-a))
+          (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) else-a)
+          `(_ ,(br-cond-condition op) (,then-t . ,then-a) (,else-t . ,else-a)))))
     (deserializer
       (lambda (lst)
         (okm-match lst
-          ((_ condition then-target else-target)
+          ((_ condition (then-t . then-a) (else-t . else-a))
            (okm-assert-guard
              ((valid-register-name? condition)
-              (pair? then-target)
-              (pair? else-target)
-              (or (null? (cdr then-target)) (for-all valid-register-name? (cdr then-target)))
-              (or (null? (cdr else-target)) (for-all valid-register-name? (cdr else-target))))
-             (make-br-cond condition then-target else-target)))))))
+              (symbol? then-t)
+              (list? then-a)
+              (for-all valid-register-name? then-a)
+              (symbol? else-t)
+              (list? else-a)
+              (for-all valid-register-name? else-a))
+             (%make-br-cond condition then-t then-a else-t else-a)))))))
+
+  (define make-br-cond
+    (case-lambda
+      ((condition then-target else-target)
+       (%make-br-cond condition then-target '() else-target '()))
+      ((condition then-target then-args else-target else-args)
+       (%make-br-cond condition then-target then-args else-target else-args))))
 
   (define-dialect-op (be syscall)
     (fields
