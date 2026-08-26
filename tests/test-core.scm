@@ -47,40 +47,47 @@
     (test-assert (not (serialize-op 'temp-op op)))
     (test-assert (not (deserialize-op '(temp-op 1))))))
 
-(test-group "int"
-  (let ((i (make-int 32)))
-    (test-assert (int? i))
-    (test-equal 32 (int-size i))
-    (test-equal '(int 32) (int-serialize i))
-    (let ((deserialized (int-deserialize '(int 32))))
-      (test-assert (int? deserialized))
-      (test-equal 32 (int-size deserialized)))
-    (test-assert (not (int-deserialize '(int))))
-    (test-assert (not (int-deserialize '(ptr))))))
-
-(test-group "ptr"
-  (let ((p (make-ptr)))
+(test-group "primitive-types"
+  (let ((t32 (make-i32))
+        (t64 (make-i64))
+        (f32 (make-f32))
+        (f64 (make-f64))
+        (p (make-ptr)))
+    (test-assert (i32? t32))
+    (test-assert (i64? t64))
+    (test-assert (f32? f32))
+    (test-assert (f64? f64))
     (test-assert (ptr? p))
-    (test-equal 'ptr (ptr-serialize p))
-    (let ((deserialized (ptr-deserialize 'ptr)))
-      (test-assert (ptr? deserialized)))
-    (test-assert (not (ptr-deserialize 'int)))
-    (test-assert (not (ptr-deserialize '(ptr))))))
+
+    (test-equal ':i32 (i32-serialize t32))
+    (test-equal ':i64 (i64-serialize t64))
+    (test-equal ':f32 (f32-serialize f32))
+    (test-equal ':f64 (f64-serialize f64))
+    (test-equal ':ptr (ptr-serialize p))
+
+    (test-assert (i32? (i32-deserialize ':i32)))
+    (test-assert (i64? (i64-deserialize ':i64)))
+    (test-assert (f32? (f32-deserialize ':f32)))
+    (test-assert (f64? (f64-deserialize ':f64)))
+    (test-assert (ptr? (ptr-deserialize ':ptr)))
+
+    (test-assert (not (i32-deserialize 'invalid)))
+    (test-assert (not (ptr-deserialize '(:ptr_invalid))))))
 
 (test-group "func-type"
-  (let* ((i32 (make-int 32))
+  (let* ((t32 (make-i32))
          (p (make-ptr))
-         (ft (make-func-type (list i32 p) (list i32)))
+         (ft (make-func-type (list t32 p) (list t32)))
          (s (func-type-serialize ft))
          (d (func-type-deserialize s))
-         (d2 (deserialize-type '(func ((int 32) ptr) -> ((int 32))))))
+         (d2 (deserialize-type '(func (:i32 :ptr) -> (:i32)))))
     (test-assert (func-type? ft))
-    (test-equal '(func ((int 32) ptr) -> ((int 32))) s)
+    (test-equal '(func (:i32 :ptr) -> (:i32)) s)
     (test-assert (func-type? d))
     (test-equal 2 (length (func-type-param-types d)))
     (test-equal 1 (length (func-type-return-types d)))
     (test-assert (func-type? d2))
-    (test-equal '(func ((int 32) ptr) -> ((int 32))) (serialize-type d2))
+    (test-equal '(func (:i32 :ptr) -> (:i32)) (serialize-type d2))
     (test-assert (core-type? d2))))
 
 (test-group "register"
@@ -89,10 +96,10 @@
   (test-assert (not (valid-register-name? 'rax)))
   (test-assert (not (valid-register-name? '%)))
   (test-assert (not (valid-register-name? 123)))
-  (let ((reg (make-register '%rax 'int)))
+  (let ((reg (make-register '%rax (make-i32))))
     (test-assert (register? reg))
     (test-equal '%rax (register-name reg))
-    (test-equal 'int (register-type reg))))
+    (test-assert (i32? (register-type reg)))))
 
 (test-group "okm-symbol"
   (test-assert (okm-valid-symbol-name? '$foo))
@@ -100,80 +107,65 @@
   (test-assert (not (okm-valid-symbol-name? 'foo)))
   (test-assert (not (okm-valid-symbol-name? '$)))
   (test-assert (not (okm-valid-symbol-name? 123)))
-  (let ((sym (make-okm-symbol '$foo 'int #f)))
+  (let ((sym (make-okm-symbol '$foo (make-i32) #f)))
     (test-assert (okm-symbol? sym))
     (test-equal '$foo (okm-symbol-name sym))
-    (test-equal 'int (okm-symbol-type sym))
+    (test-assert (i32? (okm-symbol-type sym)))
     (test-equal #f (okm-symbol-def sym))))
 
-(test-group "operation-parsing"
-  (let* ((op-lst '(%res : (int 32) = (test-op 42) attr1 attr2))
-         (op (read-operation op-lst)))
-    (test-assert (operation? op))
-    (test-equal 'test-op (operation-op-type op))
-    (test-assert (test-op? (operation-op op)))
-    (test-equal 42 (test-op-value (operation-op op)))
-    (let ((targets (operation-targets op)))
-      (test-equal 1 (length targets))
-      (let ((reg (car targets)))
-        (test-assert (register? reg))
-        (test-equal '%res (register-name reg))
-        (test-assert (int? (register-type reg)))
-        (test-equal 32 (int-size (register-type reg)))))
-    (test-equal '(attr1 attr2) (operation-attributes op)))
-
-  (let* ((op-lst '(%r1 %r2 : (int 32) ptr = (test-op 42)))
-         (op (read-operation op-lst)))
-    (test-assert (operation? op))
-    (let ((targets (operation-targets op)))
-      (test-equal 2 (length targets))
-      (let ((reg1 (car targets))
-            (reg2 (cadr targets)))
-        (test-equal '%r1 (register-name reg1))
-        (test-assert (int? (register-type reg1)))
-        (test-equal '%r2 (register-name reg2))
-        (test-assert (ptr? (register-type reg2))))))
+(test-group "instruction-parsing"
+  (let* ((op-lst '(%res :i32 = (test-op 42) attr1 attr2))
+         (op (read-instruction op-lst)))
+    (test-assert (instruction? op))
+    (test-equal 'test-op (instruction-op-type op))
+    (test-assert (test-op? (instruction-op op)))
+    (test-equal 42 (test-op-value (instruction-op op)))
+    (let ((reg (instruction-target op)))
+      (test-assert (register? reg))
+      (test-equal '%res (register-name reg))
+      (test-assert (i32? (register-type reg))))
+    (test-equal '(attr1 attr2) (instruction-attributes op)))
 
   (let* ((op-lst '(test-op 100))
-         (op (read-operation op-lst)))
-    (test-assert (operation? op))
-    (test-equal 'test-op (operation-op-type op))
-    (test-assert (test-op? (operation-op op)))
-    (test-equal 100 (test-op-value (operation-op op)))
-    (test-equal '() (operation-targets op))
-    (test-equal '() (operation-attributes op)))
+         (op (read-instruction op-lst)))
+    (test-assert (instruction? op))
+    (test-equal 'test-op (instruction-op-type op))
+    (test-assert (test-op? (instruction-op op)))
+    (test-equal 100 (test-op-value (instruction-op op)))
+    (test-assert (not (instruction-target op)))
+    (test-equal '() (instruction-attributes op)))
 
   (let* ((op-lst '((test-op 100)))
-         (op (read-operation op-lst)))
-    (test-assert (operation? op))
-    (test-equal 'test-op (operation-op-type op))
-    (test-assert (test-op? (operation-op op)))
-    (test-equal 100 (test-op-value (operation-op op)))
-    (test-equal '() (operation-targets op))
-    (test-equal '() (operation-attributes op))))
+         (op (read-instruction op-lst)))
+    (test-assert (instruction? op))
+    (test-equal 'test-op (instruction-op-type op))
+    (test-assert (test-op? (instruction-op op)))
+    (test-equal 100 (test-op-value (instruction-op op)))
+    (test-assert (not (instruction-target op)))
+    (test-equal '() (instruction-attributes op))))
 
 (test-group "block-parsing"
   (let* ((block-lst '(block bb0
-                      (%res : (int 32) = (test-op 42) attr1)
+                      (%res :i32 = (test-op 42) attr1)
                       (test-op 100)))
          (blk (block-deserialize block-lst)))
     (test-assert (block? blk))
     (let ((name (block-name blk))
-          (ops (block-ops blk)))
+          (ops (block-instructions blk)))
       (test-equal 'bb0 name)
       (test-equal 2 (length ops))
       (let ((op1 (car ops))
             (op2 (cadr ops)))
-        (test-assert (operation? op1))
-        (test-equal 'test-op (operation-op-type op1))
-        (test-assert (operation? op2))
-        (test-equal 'test-op (operation-op-type op2)))))
+        (test-assert (instruction? op1))
+        (test-equal 'test-op (instruction-op-type op1))
+        (test-assert (instruction? op2))
+        (test-equal 'test-op (instruction-op-type op2)))))
   (test-assert (not (block-deserialize '(not-a-block)))))
 
 (test-group "region-parsing"
   (let* ((region-lst '(region
                        (block
-                         (%res : (int 32) = (test-op 42)))
+                         (%res :i32 = (test-op 42)))
                        (block
                          (test-op 100))))
          (reg (region-deserialize region-lst)))
@@ -188,7 +180,7 @@
 
 (test-group "block-serialization"
   (let* ((block-lst '(block bb0
-                      (%res : (int 32) = (test-op 42) attr1)
+                      (%res :i32 = (test-op 42) attr1)
                       (test-op 100)))
          (blk (block-deserialize block-lst)))
     (test-equal block-lst (block-serialize blk))))
@@ -196,7 +188,7 @@
 (test-group "region-serialization"
   (let* ((region-lst '(region
                        (block bb0
-                         (%res : (int 32) = (test-op 42)))
+                         (%res :i32 = (test-op 42)))
                        (block bb1
                          (test-op 100))))
          (reg (region-deserialize region-lst)))
@@ -231,21 +223,10 @@
   (test-equal '() (error-messages))
 
   ;; okm-match: matching pattern returns body
-  (test-equal 32 (okm-match '(int 32) (('int sz) sz)))
+  (test-equal 'match (okm-match ':i32 (':i32 'match)))
 
   ;; okm-match: no matching pattern returns #f
-  (test-equal #f (okm-match '(bad 32) (('int sz) sz)))
-
-  ;; okm-match: multiple clauses, first match wins
-  (test-equal 'int-case
-    (okm-match '(int 32)
-      (('int sz) 'int-case)
-      (('ptr) 'ptr-case)))
-
-  (test-equal 'ptr-case
-    (okm-match '(ptr)
-      (('int sz) 'int-case)
-      (('ptr) 'ptr-case)))
+  (test-equal #f (okm-match 'bad (':i32 'match)))
 
   (reset-error-log!)
   (test-equal 0 (error-count))
@@ -253,36 +234,40 @@
 
 (test-group "core-deserializer-assertions"
   (reset-error-log!)
-  ;; Deserializing invalid size in int logs error and returns #f
-  (test-assert (not (deserialize-type '(int -32))))
-  (test-equal 1 (error-count))
-
-  ;; Deserializing invalid symbol for ptr logs error and returns #f
-  (test-assert (not (deserialize-type 'not-ptr)))
-  (test-equal 1 (error-count))
+  ;; Deserializing invalid symbol returns #f
+  (test-assert (not (deserialize-type 'not-a-type)))
+  (test-equal 0 (error-count))
 
   ;; Deserializing invalid region tag returns #f
   (test-assert (not (region-deserialize '(not-a-region))))
-  (test-equal 1 (error-count))
+  (test-equal 0 (error-count))
 
   ;; Deserializing invalid block tag returns #f
   (test-assert (not (block-deserialize '(not-a-block))))
-  (test-equal 1 (error-count))
+  (test-equal 0 (error-count))
 
   (reset-error-log!))
 
 (test-group "core-type-registry"
-  (test-assert (core-type? (make-int 32)))
+  (test-assert (core-type? (make-i32)))
+  (test-assert (core-type? (make-i64)))
+  (test-assert (core-type? (make-f32)))
+  (test-assert (core-type? (make-f64)))
   (test-assert (core-type? (make-ptr)))
   (test-assert (not (core-type? "not-a-type")))
   (test-assert (not (core-type? 123)))
 
-  (test-equal '(int 32) (serialize-type (make-int 32)))
-  (test-equal 'ptr (serialize-type (make-ptr)))
+  (test-equal ':i32 (serialize-type (make-i32)))
+  (test-equal ':i64 (serialize-type (make-i64)))
+  (test-equal ':f32 (serialize-type (make-f32)))
+  (test-equal ':f64 (serialize-type (make-f64)))
+  (test-equal ':ptr (serialize-type (make-ptr)))
 
-  (test-assert (int? (deserialize-type '(int 32))))
-  (test-equal 32 (int-size (deserialize-type '(int 32))))
-  (test-assert (ptr? (deserialize-type 'ptr)))
+  (test-assert (i32? (deserialize-type ':i32)))
+  (test-assert (i64? (deserialize-type ':i64)))
+  (test-assert (f32? (deserialize-type ':f32)))
+  (test-assert (f64? (deserialize-type ':f64)))
+  (test-assert (ptr? (deserialize-type ':ptr)))
   (test-assert (not (deserialize-type '(invalid-type)))))
 
 (test-end "ockham-core")
