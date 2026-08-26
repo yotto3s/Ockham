@@ -194,7 +194,7 @@
 
 (test-group "control-flow-core-integration"
   (let* ((op-br-sexp '(br (^bb1 %a %b)))
-         (op-brcond-sexp '(br-cond %c (^bb1 %a) (^bb2)))
+         (op-brcond-sexp '(br-cond %c (^bb1 %a) ^bb2))
          (op-br (read-instruction op-br-sexp))
          (op-brcond (read-instruction op-brcond-sexp)))
     (test-assert (instruction? op-br))

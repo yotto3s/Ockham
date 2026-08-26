@@ -43,6 +43,46 @@
           urem-type urem-lhs urem-rhs
           urem-serialize urem-deserialize
 
+          cmpeq make-cmpeq cmpeq?
+          cmpeq-type cmpeq-lhs cmpeq-rhs
+          cmpeq-serialize cmpeq-deserialize
+
+          cmpne make-cmpne cmpne?
+          cmpne-type cmpne-lhs cmpne-rhs
+          cmpne-serialize cmpne-deserialize
+
+          slt make-slt slt?
+          slt-type slt-lhs slt-rhs
+          slt-serialize slt-deserialize
+
+          ult make-ult ult?
+          ult-type ult-lhs ult-rhs
+          ult-serialize ult-deserialize
+
+          sgt make-sgt sgt?
+          sgt-type sgt-lhs sgt-rhs
+          sgt-serialize sgt-deserialize
+
+          ugt make-ugt ugt?
+          ugt-type ugt-lhs ugt-rhs
+          ugt-serialize ugt-deserialize
+
+          sle make-sle sle?
+          sle-type sle-lhs sle-rhs
+          sle-serialize sle-deserialize
+
+          ule make-ule ule?
+          ule-type ule-lhs ule-rhs
+          ule-serialize ule-deserialize
+
+          sge make-sge sge?
+          sge-type sge-lhs sge-rhs
+          sge-serialize sge-deserialize
+
+          uge make-uge uge?
+          uge-type uge-lhs uge-rhs
+          uge-serialize uge-deserialize
+
           sext make-sext sext?
           sext-operand
           sext-serialize sext-deserialize
@@ -89,7 +129,9 @@
 
           module make-module module?
           module-name module-body
-          module-serialize module-deserialize)
+          module-serialize module-deserialize
+
+          init-ops!)
   (import (rnrs (6))
           (ufo-match)
           (ockham core))
@@ -238,7 +280,7 @@
                           ((valid-register-name? operand))
                           (make-op operand)))))))))))))
 
-  (define-binary-ops add sub mul sdiv udiv lshift rshift srem urem)
+  (define-binary-ops add sub mul sdiv udiv lshift rshift srem urem cmpeq cmpne slt ult sgt ugt sle ule sge uge)
 
   (define-extension-op sext)
   (define-extension-op zext)
@@ -291,6 +333,11 @@
               (valid-register-name? val))
              (make-store ptr val 0)))))))
 
+  (define (parse-br-target-spec sexp)
+    (if (pair? sexp)
+        (values (car sexp) (cdr sexp))
+        (values sexp '())))
+
   (define-record-type (br %make-br br?)
     (fields
       (immutable target br-target)
@@ -302,16 +349,19 @@
       (okm-assert (symbol? tgt))
       (okm-assert (list? args))
       (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) args)
-      `(br (,tgt . ,args))))
+      (if (null? args)
+          `(br ,tgt)
+          `(br (,tgt . ,args)))))
 
   (define (br-deserialize lst)
     (okm-match lst
-      (('br (tgt . args))
-       (okm-assert-guard
-         ((symbol? tgt)
-          (list? args)
-          (for-all valid-register-name? args))
-         (%make-br tgt args)))))
+      (('br spec)
+       (let-values (((tgt args) (parse-br-target-spec spec)))
+         (okm-assert-guard
+           ((symbol? tgt)
+            (list? args)
+            (for-all valid-register-name? args))
+           (%make-br tgt args))))))
 
   (define make-br
     (case-lambda
@@ -338,20 +388,24 @@
       (okm-assert (symbol? else-t))
       (okm-assert (list? else-a))
       (for-each (lambda (arg) (okm-assert (valid-register-name? arg))) else-a)
-      `(br-cond ,(br-cond-condition op) (,then-t . ,then-a) (,else-t . ,else-a))))
+      (let ((then-part (if (null? then-a) then-t `(,then-t . ,then-a)))
+            (else-part (if (null? else-a) else-t `(,else-t . ,else-a))))
+        `(br-cond ,(br-cond-condition op) ,then-part ,else-part))))
 
   (define (br-cond-deserialize lst)
     (okm-match lst
-      (('br-cond condition (then-t . then-a) (else-t . else-a))
-       (okm-assert-guard
-         ((valid-register-name? condition)
-          (symbol? then-t)
-          (list? then-a)
-          (for-all valid-register-name? then-a)
-          (symbol? else-t)
-          (list? else-a)
-          (for-all valid-register-name? else-a))
-         (%make-br-cond condition then-t then-a else-t else-a)))))
+      (('br-cond condition then-spec else-spec)
+       (let-values (((then-t then-a) (parse-br-target-spec then-spec))
+                    ((else-t else-a) (parse-br-target-spec else-spec)))
+         (okm-assert-guard
+           ((valid-register-name? condition)
+            (symbol? then-t)
+            (list? then-a)
+            (for-all valid-register-name? then-a)
+            (symbol? else-t)
+            (list? else-a)
+            (for-all valid-register-name? else-a))
+           (%make-br-cond condition then-t then-a else-t else-a))))))
 
   (define make-br-cond
     (case-lambda
@@ -522,6 +576,16 @@
     (register-op 'rshift rshift-serialize rshift-deserialize)
     (register-op 'srem srem-serialize srem-deserialize)
     (register-op 'urem urem-serialize urem-deserialize)
+    (register-op 'cmpeq cmpeq-serialize cmpeq-deserialize)
+    (register-op 'cmpne cmpne-serialize cmpne-deserialize)
+    (register-op 'slt slt-serialize slt-deserialize)
+    (register-op 'ult ult-serialize ult-deserialize)
+    (register-op 'sgt sgt-serialize sgt-deserialize)
+    (register-op 'ugt ugt-serialize ugt-deserialize)
+    (register-op 'sle sle-serialize sle-deserialize)
+    (register-op 'ule ule-serialize ule-deserialize)
+    (register-op 'sge sge-serialize sge-deserialize)
+    (register-op 'uge uge-serialize uge-deserialize)
     (register-op 'sext sext-serialize sext-deserialize)
     (register-op 'zext zext-serialize zext-deserialize)
     (register-op 'load load-serialize load-deserialize)
