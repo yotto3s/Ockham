@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+const fs = require('fs');
+const path = require('path');
+
+const args = process.argv.slice(2);
+let inputFile = null;
+let outputFile = null;
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '-o' && i + 1 < args.length) {
+    outputFile = args[i + 1];
+    i++;
+  } else if (!args[i].startsWith('-')) {
+    inputFile = args[i];
+  }
+}
+
+if (!inputFile) {
+  console.error("Usage: wat2wasm <input.wat> [-o <output.wasm>]");
+  process.exit(1);
+}
+
+const wabtModule = require(path.join(__dirname, '../node_modules/wabt'));
+const watText = fs.readFileSync(inputFile, 'utf8');
+
+wabtModule().then(w => {
+  const parsed = w.parseWat(inputFile, watText);
+  const binary = parsed.toBinary({});
+  const outPath = outputFile || inputFile.replace(/\.wat$/, '.wasm');
+  fs.writeFileSync(outPath, Buffer.from(binary.buffer));
+});
